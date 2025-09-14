@@ -1,0 +1,387 @@
+# NicheFunctions
+
+
+# ----------------------------------------------------------------
+#            Functions to calculate niche overlaps
+# ----------------------------------------------------------------
+
+
+# Niche overlap for binomial data:
+
+no.bin.fn <- function(sp,yy)
+  {
+   counts.mat <- as.matrix(table(sp,yy))
+   props.mat  <- counts.mat/apply(counts.mat,1,sum)
+   out.mat <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      small.mat <- props.mat[c(ii,jj),]
+      mins <- apply(small.mat,2,min)
+      out.mat[ii,jj] <- sum(mins)
+      out.mat[jj,ii] <- sum(mins)
+      }
+   out.mat
+   }
+
+
+# Niche overlap for categorical data (same as for bin data):
+
+no.cat.fn <- function(sp,yy)
+   {
+   counts.mat <- as.matrix(table(sp,yy))
+   props.mat  <- counts.mat/apply(counts.mat,1,sum)
+   out.mat <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      small.mat <- props.mat[c(ii,jj),]
+      mins <- apply(small.mat,2,min)
+      out.mat[ii,jj] <- sum(mins)
+      out.mat[jj,ii] <- sum(mins)
+      }
+   out.mat
+   }
+
+# Niche overlap for count data:
+
+no.count.fn <- function(these.ss,yy)
+   {
+   # For each species or site, use the observed counts to fit a
+   # Poisson mixture model. Try models up to a maximum of 
+   # four groups.
+   Gmax <- min(4,floor(0.5*length(unique(yy))))
+   # Evaluate probabilities up to a high number of counts, 
+   # e.g. up to 2*max(yy).
+   maxcol <- 2*max(yy)
+   pois.probs.mat <- matrix(NA,no.spp,maxcol)
+   for (sp in 1:no.spp)
+      {
+      x <<- yy[these.ss==spnames[sp]]
+      AIC.vect <- rep(NA,Gmax)
+      probs.mat <- matrix(NA,Gmax,maxcol)
+      # One group.
+      lamhat  <- mean(x)
+      max.ll  <- sum(x) * (log(mean(x))-1)
+      res.dev <- -2*max.ll
+      npar    <- 1
+      AIC.vect[1] <- res.dev + 2*npar
+      probs.mat[1,] <- dpois(0:(maxcol-1),lamhat)
+      # Two, three ... groups:
+      for (g in 2:Gmax)
+         {
+         g <<- g
+         alpha.start <- rep(0.5,g-1)
+         pi.start <- rep(1/g,g-1)
+         # Allows for a new group at end, prob 1/g
+         start.vect <- c(alpha.start,max(x),pi.start)
+         # Fit the current model:
+         g.fit <-  optim(par=start.vect,
+                      fn=pois.minusll.g,
+                      method = "L-BFGS-B",
+                      lower=c(rep(0.0001,(2*g-1))),
+                      upper=c(rep(Inf,g),rep(0.9999,(g-1))))
+         # Save the results:
+         max.ll     <- -g.fit$value
+         res.dev    <- -2*max.ll
+         npar       <- 2*g-1
+         AIC.vect[g] <- res.dev + 2*npar
+         alpha.out  <- g.fit$par[1:(g-1)]
+         lam.g      <- g.fit$par[g]
+         pi.out     <- g.fit$par[(g+1):(2*g-1)]
+         lambda.hat <- c((cumprod(alpha.out[(g-1):1]))[(g-1):1],1)*lam.g
+         pi.hat     <- c(pi.out,1-sum(pi.out))
+         temp.mat   <- matrix(NA,g,maxcol)
+         for (iii in 1:g) for (jjj in 1:maxcol)
+            temp.mat[iii,jjj] <- pi.hat[iii]*dpois(jjj-1,lambda.hat[iii])
+         probs.mat[g,] <- apply(temp.mat,2,sum)
+         }
+      pois.probs.mat[sp,] <- probs.mat[AIC.vect==min(AIC.vect),]
+      }
+   # Now construct the NO matrix:
+   out.mat <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      small.mat <- probs.mat[c(ii,jj),]
+      mins <- apply(small.mat,2,min)
+      out.mat[ii,jj] <- sum(mins)
+      out.mat[jj,ii] <- sum(mins)
+      }
+   out.mat
+   }         
+
+# Function to find -loglikelihood, Poisson mixture model, g groups:
+# Used for count data.
+
+pois.minusll.g <- function(invect)
+   {
+   alpha.in  <- invect[1:(g-1)]
+   lam.v     <- rep(invect[g],g)
+   pi.in     <- invect[(g+1):(2*g-1)]
+   lam.v[-g] <- lam.v[g]*((cumprod(alpha.in[(g-1):1]))[(g-1):1])
+   pi.v      <- c(pi.in,1-sum(pi.in))
+   loglik    <- -10^8
+   if (min(c(lam.v,pi.v,1-pi.v))>0)
+      {
+      loglik  <- 0
+      for (xi in x)
+         {
+         term <- sum(pi.v*exp(-lam.v)*(lam.v^xi))
+         loglik <- loglik + log(term)
+         }
+      }
+   -loglik 
+   }
+
+
+
+no.cat.fn <- function(sp,yy)
+   {
+   counts.mat <- as.matrix(table(sp,yy))
+   props.mat  <- counts.mat/apply(counts.mat,1,sum)
+   out.mat <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      small.mat <- props.mat[c(ii,jj),]
+      mins <- apply(small.mat,2,min)
+      out.mat[ii,jj] <- sum(mins)
+      out.mat[jj,ii] <- sum(mins)
+      }
+   out.mat
+   }
+
+no.cts.fn <- function(sp,yy)
+   {
+   # Do density estimation for each species:
+   # The density functions must have matching values of x.
+   # Go well outside the actual data at ends, to get to 
+   # zero density.
+   lowx <- min(yy)-2*sd(yy)
+   topx <- max(yy)+2*sd(yy)
+   # Define the x values for which the density functions
+   # will be calculated. These must match. Go well
+   # outside the actual data at top end, to get to zero density.
+   # Lowest value at 0, highest at topx.
+   # Let nn = number of x values.
+   nn   <- 500
+   # Find dd, the distance between spikes:
+   dd <- (topx-lowx)/(nn-1)
+   x.vect <- seq(lowx,topx,length.out=nn)
+   y.mat  <- matrix(NA,no.spp,nn)
+   for (ii in 1:no.spp)
+      {
+      this.sp <- spnames[ii]
+      this.y  <- yy[sp==this.sp]
+      this.y  <- this.y[!is.na(this.y)]  # Remove missing values
+      this.n  <- length(this.y)          # Number of usable observations
+      # Need at least two points to select a bandwidth for density est.
+      if (length(this.y)>1)      # Density estimation is possible
+         {
+         this.dens <- density(this.y, n=nn, from=lowx, to=topx)
+         y.mat[ii,] <- this.dens[[2]]
+         }
+      }
+   # Find niche overlap for each pair of species.
+   out.mat  <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      min.dens <- apply(y.mat[c(ii,jj),],2,min)
+      this.no  <- sum(min.dens)*dd
+      out.mat[ii,jj] <- this.no 
+      out.mat[jj,ii] <- this.no
+      }
+   out.mat
+   }
+
+
+
+# ----------------------------------------------------------------
+#                Calculate Manly's alpha
+# ----------------------------------------------------------------
+
+# Function to calculate the alpha values for different spp at one site.
+
+alpha.fn <- function(sp,yy,avail.v)
+   {
+   out.mat <- matrix(NA,no.spp,no.choices)
+   for (ii in 1:no.spp)
+      {
+      this.sp <- spnames[ii]
+      this.f.vect <- rep(0,no.choices)
+      for (jj in 1:no.choices) 
+         {
+         this.choice <- choicenames[jj]
+         this.f.vect[jj] <- 
+            length(yy[(yy==this.choice)&(sp==this.sp)])
+         }
+      alpha.v <- rep(NA,no.choices)
+      alpha.v[avail.v>0] <- 
+         this.f.vect[avail.v>0]/avail.v[avail.v>0]
+      if (sum(alpha.v,na.rm=T)>0)
+         out.mat[ii,] <- alpha.v/sum(alpha.v,na.rm=T)
+      }
+   out.mat 
+   }
+
+# Function to calculate the alpha values for one species,
+# different sites.
+
+alpha2.fn <- function(si,yy,avail.m)
+   {
+   out.mat <- matrix(NA,no.spp,no.choices)
+   for (ii in 1:no.spp)  # Site ii
+      {
+      this.si <- spnames[ii]
+      this.f.vect <- rep(0,no.choices)
+      for (jj in 1:no.choices) 
+         {
+         this.choice <- choicenames[jj]
+         this.f.vect[jj] <- 
+            length(yy[(yy==this.choice)&(si==this.si)])
+         }
+      alpha.v <- rep(NA,no.choices)
+      avail.v <- avail.m[ii,]
+      alpha.v[avail.v>0] <- 
+         this.f.vect[avail.v>0]/avail.v[avail.v>0]
+      if (sum(alpha.v,na.rm=T)>0)
+         out.mat[ii,] <- alpha.v/sum(alpha.v,na.rm=T)
+      }
+   out.mat 
+   }
+
+
+
+# ----------------------------------------------------------------
+#       Calculate the NOs for resource selection variables
+# ----------------------------------------------------------------
+
+# Niche overlap for resource selection, either several species at 
+# one site, or one pecies over several sites.
+# Treats the alphas as proportions in different categories (choices). 
+# Input is a matrix, rows = spp or sites, cols = choices. 
+# Row sums are 1.
+
+no.rsel.cat.fn <- function(alpmat)
+   {
+   props.mat  <- alpmat
+   out.mat <- matrix(1,no.spp,no.spp)
+   for (ii in 1:(no.spp-1)) for (jj in (ii+1):no.spp)
+      {
+      small.mat <- props.mat[c(ii,jj),]
+      mins <- apply(small.mat,2,min)
+      out.mat[ii,jj] <- sum(mins)
+      out.mat[jj,ii] <- sum(mins)
+      }
+   out.mat
+   }
+
+
+# Version 2.
+
+# Niche overlap for one resource selection variable, calculated
+# combining information over several sites.
+# For each pair of species, say spa and spb, using Manly's 
+# alphas over all sites as a mixture of 0, 1 and continuous.
+
+# Input an array of alphas, with one row per species, one
+# column per choice of resource, and one layer per site.
+
+# The function returns an array of niche overlaps.
+# The rows and columns are species, and there is one layer for
+# each choice of resource.
+
+# Have already defined choicenames, no.choices, etc.
+
+no.rsel.fn <- function(alp.a,nspikes)
+   {
+   # Input array is spp by choices by sites.
+   # Set up the output array, spp by spp by choices.
+   this.no.array <- array(NA,c(no.spp,no.spp,no.choices))
+   dimnames(this.no.array) <- list(spnames,spnames,choicenames)
+   # For each choice of the resource, and for each pair of
+   # species, find and store the niche overlap.
+   for (cc in 1:no.choices)
+      {
+      # Set up a matrix to store p0 and p1, probs of taking
+      # values 0 or 1:
+      endprobs.mat <- matrix(NA,no.spp,2)
+      dimnames(endprobs.mat) <- list(spnames,c("p0","p1"))
+      for (ii in 1:(no.spp-1))    # Species i
+      for (jj in (ii+1):no.spp)   # Species j
+         {
+         # Analyse first species (species a):
+         alpha.a <- alp.a[ii,cc,]  # Vector of length 173
+         alpha.a <- alpha.a[!is.na(alpha.a)]  # Remove missing values
+         n.a <- length(alpha.a)       # Number of usable observations
+         p0.a <- length(alpha.a[alpha.a==0])/n.a
+         p1.a <- length(alpha.a[alpha.a==1])/n.a
+         no.internal.pts <- sum((alpha.a>0)&(alpha.a<1))
+          # Need at least two internal points to select a bandwidth 
+         # for density est.
+         if (no.internal.pts>1)   # Density estimation is possible
+            { 
+            alph.a <- alpha.a[(alpha.a>0)&(alpha.a<1)]
+            logitAlph.a <- log(alph.a/(1-alph.a))
+            dens.a <- density(logitAlph.a, n=nspikes, from=-5, to=5)
+            # Adjust to have total area 1 including zeros and ones:
+            reduced.dens.a <- (dens.a$y)*(1-p0.a-p1.a)
+            dd1 <- dens.a$x[2] -dens.a$x[1]
+            }
+         if (no.internal.pts<2)   # Density estimation is not possible
+            {                    # Discard any observation in (0,1)
+            reduced.dens.a <- rep(0,nspikes)
+            alph.a <- alpha.a[(alpha.a>0)&(alpha.a<1)]
+             p0.a <- length(alpha.a[alpha.a==0])/(n.a-length(alph.a))
+            p1.a <- length(alpha.a[alpha.a==1])/(n.a-length(alph.a))
+            dd1 <- 0 
+            }
+         # Analyse second species:
+         alpha.b <- alp.a[jj,cc,]
+         alpha.b <- alpha.b[!is.na(alpha.b)]  # Remove missing values
+         n.b <- length(alpha.b)       # Number of usable observations
+         p0.b <- length(alpha.b[alpha.b==0])/n.b
+         p1.b <- length(alpha.b[alpha.b==1])/n.b
+         no.internal.pts <- sum((alpha.b>0)&(alpha.b<1))
+         # Need at least two points to select a bandwidth for density est.
+         if (no.internal.pts>1)
+            {
+            alph.b <- alpha.b[(alpha.b>0)&(alpha.b<1)]
+            logitAlph.b <- log(alph.b/(1-alph.b))
+            dens.b <- density(logitAlph.b, n=nspikes, from=-5, to=5)
+            # Adjust to have total area 1 including zeros and ones:
+            reduced.dens.b <- (dens.b$y)*(1-p0.b-p1.b)
+            dd2 <- dens.b$x[2] -dens.b$x[1] 
+            }
+         if (no.internal.pts<1)   # Density estimation is not possible
+            {                    # Discard any observation in (0,1)
+            reduced.dens.b <- rep(0,nspikes)
+            alph.b <- alpha.b[(alpha.b>0)&(alpha.b<1)]
+            p0.b <- length(alpha.b[alpha.b==0])/(n.b-length(alph.b))
+            p1.b <- length(alpha.b[alpha.b==1])/(n.b-length(alph.b))
+            dd2 <- 0 
+            }
+#print(dens.b)
+         # Now calculate niche overlap:
+         # Case 1: both data sets had enough internal pts. for dens. est
+         if (dd1*dd2 > 0)
+            y.min <- apply(cbind(reduced.dens.a,reduced.dens.b),1,min)
+         # Case 2: At most one data set had enough intermediate points
+         if (dd1*dd2==0)
+#print(dd1)
+#print(dd2)  
+            y.min <- 0
+         # Find area between curves (between 0 and 1) then NO:
+         area.between <- sum(y.min)*dd1
+         p0.min <- min(c(p0.a,p0.b))
+         p1.min <- min(c(p1.a,p1.b))
+         this.NO <- p0.min + area.between + p1.min
+         # Store it in the temporary NOARRAY:
+         this.no.array[ii,jj,cc] <- this.NO
+         this.no.array[jj,ii,cc] <- this.NO
+         diag(this.no.array[,,cc]) <- rep(1,no.spp)
+         # Require at least 1 readings for NO calculation:
+         if ((n.a<1)|(n.b<1))
+            this.no.array[,,cc] <- NA
+         }
+      }
+      # Return the NOARRAY as the result of the function:
+      this.no.array
+   }

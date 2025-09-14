@@ -1,0 +1,2 @@
+grass forest rock
+30 50 20
