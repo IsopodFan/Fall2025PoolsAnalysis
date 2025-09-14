@@ -29,14 +29,16 @@ library(dplyr)
 library(ggridges) 
 library(readxl) 
 library(systemfonts)
-library(hrbrthemes)
+#library(hrbrthemes)
 library(gridExtra)
 library(grid)
+library(abind) 
+library(here)
 
 #import and prep data 
+
 #import data
-WideData <- read_excel("C:/Users/jackb/Downloads/Final_Cleaned_Pools_Dataset_11_10.xlsx", 
-                       sheet = "FINAL_DATA_W_OTHERDATA")
+WideData <- read_excel(here("PoolsData_Final.xlsx"))
 #flip data
 LongData <- gather(data = WideData, key = "Species", value = "Count", "Ostracod":"Springtail") 
 
@@ -50,7 +52,7 @@ LongData <- LongData %>%
 #check to make sure there aren't any NAs remaining in other columns
 LongDataCheck1 <- LongData[, !(names(LongData) %in% c("Count", "Depth_cm", "Temperature_C", "Dissolved_Oxygen", "NOTES"))]
 sum(is.na(LongDataCheck1))
-#we good
+#we good if you see 0
 
 #turn Count column into numeric
 LongData$Count <- as.numeric(LongData$Count)
@@ -65,3 +67,31 @@ LongData <- LongData %>%
 #same process to remove pond data 
 LongData <- LongData %>% 
   filter(!(Pool_Number %in% "Pond"))
+
+#Load functions from Geange files
+source(here("ExampleCfiles", "MEE3_070_sm_NicheFunctions.txt"))
+
+#add id column and move it and species to the front
+LongData <- LongData |> 
+  mutate(id = row_number()) |> 
+  select(id, Species, everything())
+
+#START GEANGE ANALYSIS----------------------------------------------------------
+# read in the individual data file
+B.df <- LongData
+
+
+# Ensure the first two column names are "id" and "species".
+colnames(B.df)[1] <- "id"
+colnames(B.df)[2] <- "species"
+
+# Ensure that the first 2 cols are factors.
+B.df$id      <- as.factor(B.df$id)
+B.df$species <- as.factor(B.df$species)
+
+# Store some vectors of names:
+spnames   <- sort(unique(as.character(B.df$species)))
+no.spp    <- length(spnames)
+
+varnames <- colnames(B.df)[-(1:2)]    
+no.vars  <- length(varnames) 
