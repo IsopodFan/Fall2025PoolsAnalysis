@@ -57,7 +57,7 @@
 
 
 # Read in the niche overlap functions:
-setwd("C:/Users/jackb/OneDrive/Desktop/Fall2025PoolsAnalysis/ExampleAfiles")
+setwd(here("ExampleAfiles"))
 source("MEE3_070_sm_NicheFunctions.txt")
 
 #############################################################
@@ -393,6 +393,12 @@ for (spa in 1:(no.spp-1)) for (spb in (spa+1):no.spp)
 VV <- ncol(A.df[,-c(1:2)])
 RR <- replic   # Number of replications.
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## IS THIS SUPPOSED TO BE A 2X33 OR 33X33X2 MATRIX?
+  #I mean it seems like it should be 2x33 (for my data)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+VV <- ncol(A.df[,-c(1:2)])
 no.mat <- matrix(NA,no.spp,ncol(A.df[,-c(1:2)]))
 for (vv in 1:VV)
   no.mat[,vv] <- as.vector(as.dist(no.array[,,vv]))
