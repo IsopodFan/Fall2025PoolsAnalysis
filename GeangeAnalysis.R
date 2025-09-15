@@ -81,40 +81,40 @@ LongData <- LongData |>
   LongData <- uncount(LongData, weights = Count)
 
 #Load functions from Geange files
-source(here("ExampleCfiles", "MEE3_070_sm_NicheFunctions.txt"))
+source(here("ExampleAfiles", "MEE3_070_sm_NicheFunctions.txt"))
 
 #add id column and move it and species to the front
 LongData <- LongData |> 
   mutate(id = paste0("id", row_number())) |> 
   select(id, Species, everything())
 
-#START GEANGE ANALYSIS----------------------------------------------------------
+#SECTION 2: GEANGE ANALYSIS----------------------------------------------------------
 
-##JULIAN DAY (COUNTINUOUS VARIABLE)---------------------------------------------
+##2.1: JULIAN DAY (COUNTINUOUS VARIABLE) AND POOL # (CATEGORICAL VARIABLE)-----------
 
 ### get data prepped -----------------------------------------------------------
 
 # read in the individual data file
-B.df <- select(LongData, id, Species, Julian_Day)
+LD.df <- select(LongData, id, Species, Julian_Day, Pool_Number)
 
 
 # Ensure the first two column names are "id" and "species".
-colnames(B.df)[1] <- "id"
-colnames(B.df)[2] <- "species"
+colnames(LD.df)[1] <- "id"
+colnames(LD.df)[2] <- "species"
 
 # Ensure that the first 2 cols are factors.
-B.df$id      <- as.factor(B.df$id)
-B.df$species <- as.factor(B.df$species)
+LD.df$id      <- as.factor(LD.df$id)
+LD.df$species <- as.factor(LD.df$species)
 
 # Store some vectors of names:
-spnames   <- sort(unique(as.character(B.df$species)))
+spnames   <- sort(unique(as.character(LD.df$species)))
 no.spp    <- length(spnames)
 
-varnames <- colnames(B.df)[-(1:2)]    
+varnames <- colnames(LD.df)[-(1:2)]    
 no.vars  <- length(varnames)  
 
 #make a vector of variable types 
-vartypes <- c("cts") 
+vartypes <- c("cts", "cat") 
 #check they are correctly labeled: 
 cbind(varnames,vartypes)
 
@@ -132,15 +132,15 @@ avail.list
 # The object alpha.list has one component per variable.
 # The components are NULL for ordinary variables.
 
-Balpha.list        <- vector("list",no.vars)
-names(Balpha.list) <- varnames
+alpha.list        <- vector("list",no.vars)
+names(alpha.list) <- varnames
 
 for (vv in 1:no.vars) if (vartypes[vv]=="rsel")
 {
-  choices                     <- unique(B.df[,vv+2])
+  choices                     <- unique(LD.df[,vv+2])
   no.ch                       <- length(choices)
-  Balpha.list[[vv]]           <- matrix(NA,no.spp,no.ch)
-  dimnames(Balpha.list[[vv]]) <- list(spnames,choices)
+  alpha.list[[vv]]           <- matrix(NA,no.spp,no.ch)
+  dimnames(alpha.list[[vv]]) <- list(spnames,choices)
 }
 
 # no.array
@@ -154,8 +154,8 @@ for (vv in 1:no.vars) if (vartypes[vv]=="rsel")
 # Rows and columns are species, layers are variables.
 
 
-Bno.array           <- array(1,c(no.spp,no.spp,no.vars))
-dimnames(Bno.array) <- list(spnames,spnames,varnames) 
+no.array           <- array(1,c(no.spp,no.spp,no.vars))
+dimnames(no.array) <- list(spnames,spnames,varnames) 
 
 # Run through each variable in turn, identify its type,
 # calculate the appropriate NO matrix and store it in
@@ -164,7 +164,7 @@ dimnames(Bno.array) <- list(spnames,spnames,varnames)
 for (vv in 1:no.vars)
 {
   #slight change to the Geange code here: 
-  y <- B.df[[varnames[vv]]]
+  y <- LD.df[[varnames[vv]]]
   #this ensures that y is a vector, and not a 1 column tibble 
   #the latter happened with my data and not the example dataset 
   #no idea why but this seems to work 
@@ -173,37 +173,46 @@ for (vv in 1:no.vars)
   print(paste("vv =", vv))
   print(str(y))
   print(paste("vartype =", vartypes[vv])) 
-  
   if (vartypes[vv] == "bin")
-    Bno.array[,,vv] <- no.bin.fn(B.df$species,y)
+    no.array[,,vv] <- no.bin.fn(LD.df$species,y)
   if (vartypes[vv] == "cat")
-    Bno.array[,,vv] <- no.cat.fn(B.df$species,y)
+    no.array[,,vv] <- no.cat.fn(LD.df$species,y)
   if (vartypes[vv] == "count")
-    Bno.array[,,vv] <- no.count.fn(B.df$species,y)
+    no.array[,,vv] <- no.count.fn(LD.df$species,y)
   if (vartypes[vv] == "cts")
-    Bno.array[,,vv] <- no.cts.fn(B.df$species,y)
+    no.array[,,vv] <- no.cts.fn(LD.df$species,y)
   if (vartypes[vv] == "meas")
-    Bno.array[,,vv] <- no.cts.fn(B.df$species,log(y))
+    no.array[,,vv] <- no.cts.fn(LD.df$species,log(y))
   if (vartypes[vv] == "pcent")
-    Bno.array[,,vv] <- no.cts.fn(B.df$species,
-                                 log(y/(100-y)))
+    no.array[,,vv] <- no.cts.fn(LD.df$species,
+                                log(y/(100-y)))
   if (vartypes[vv] == "propn")
-    Bno.array[,,vv] <- no.cts.fn(B.df$species,
-                                 log(y/(1-y)))
+    no.array[,,vv] <- no.cts.fn(LD.df$species,
+                                log(y/(1-y)))
   if (vartypes[vv] == "rsel")
   {
     
     # Do Manly's alpha calculations, store.
-    avail.vect       <- avail.list[[vv]]
-    alpha.mat        <- alpha.fn(B.df$species,y,avail.vect)
+    no.choices <- length(avail.list[[vv]])
+    choicenames <- names(avail.list[[vv]])
+    avail.vect <- avail.list[[vv]]
+    alpha.mat <- alpha.fn(LD.df$species,y,avail.vect)
     alpha.list[[vv]] <- alpha.mat         
     
     # Do niche overlaps, as proportions in categories:
-    Bno.array[,,vv] <- no.rsel.cat.fn(alpha.mat)
+    no.array[,,vv] <- no.rsel.cat.fn(alpha.mat)
   }
 }
 
-### Permutation Testing -------------------------------------------------------- 
+#also calculate overall NO measures, averaged over dimensions
+no.overall.mat <- apply(no.array,c(1,2),mean)
+no.overall.mat.sd <- apply(no.array,c(1,2),sd)
+
+
+##2.2: PERMUTATION TESTING -----------------------------------------------------
+
+### set up species label permutation -------------------------------------------
+
 # Permutation of the species labels would give data 
 # satisfying the null model of complete niche overlap, 
 # i.e. that none of the variables 
@@ -222,12 +231,12 @@ for (vv in 1:no.vars)
 # Then do more reps, e.g. 1000 reps for 3 decimal places in p-values.
 replic <- 10
 
-Bpseudo.no.array <- array(1,c(no.spp,no.spp,no.vars,replic))
-dimnames(Bpseudo.no.array) <- list(spnames,spnames,varnames,NULL)
+pseudo.no.array <- array(1,c(no.spp,no.spp,no.vars,replic))
+dimnames(pseudo.no.array) <- list(spnames,spnames,varnames,NULL)
 
 # Set a temporary data frame, which will change each time
 # through the cycle by having its species column permuted.
-temp.df <- B.df
+temp.df <- LD.df
 
 
 # For each replication, permute the species labels, run the
@@ -247,33 +256,80 @@ for (rr in 1:replic)
     
     # Run through the variable types, do appropriate analyses:
     if (vartypes[vv] == "bin")
-      Bpseudo.no.array[,,vv,rr] <- no.bin.fn(temp.df$species,y)
+      pseudo.no.array[,,vv,rr] <- no.bin.fn(temp.df$species,y)
     if (vartypes[vv] == "cat")
-      Bpseudo.no.array[,,vv,rr] <- no.cat.fn(temp.df$species,y)
+      pseudo.no.array[,,vv,rr] <- no.cat.fn(temp.df$species,y)
     if (vartypes[vv] == "count")
-      Bpseudo.no.array[,,vv,rr] <- no.count.fn(temp.df$species,y)
+      pseudo.no.array[,,vv,rr] <- no.count.fn(temp.df$species,y)
     if (vartypes[vv] == "cts")
-      Bpseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,y)
+      pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,y)
     if (vartypes[vv] == "meas")
-      Bpseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,log(y))
+      pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,log(y))
     if (vartypes[vv] == "pcent")
-      Bpseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
-                                             log(y/(100-y)))
+      pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
+                                            log(y/(100-y)))
     if (vartypes[vv] == "propn")
-      Bpseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
-                                             log(y/(1-y)))
+      pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
+                                            log(y/(1-y)))
     if (vartypes[vv] == "rsel")
     {
       
       # Do Manly's alpha calculations, store.
+      no.choices <- length(avail.list[[vv]])
+      choicenames <- names(avail.list[[vv]])
       avail.vect <- avail.list[[vv]]
       alpha.mat  <- alpha.fn(temp.df$species,y,avail.vect)
       
       # Do niche overlaps, as proportions in categories:
-      Bpseudo.no.array[,,vv,rr] <- no.rsel.cat.fn(alpha.mat)
+      pseudo.no.array[,,vv,rr] <- no.rsel.cat.fn(alpha.mat)
     }
   }
   print(paste("Rep",rr,"done"))
 }
 
-## POOL #/CREEK (CATEGORICAL DATA)---------------------------------------------- 
+
+### null model analysis --------------------------------------------------------
+
+# Calculate p values for each pair of species 
+# separately for each variable.
+sep.pvals     <- array(1,c(no.spp,no.spp,no.vars))
+dimnames(sep.pvals) <- list(spnames,spnames,varnames)
+
+for (spa in 1:(no.spp-1)) for (spb in (spa+1):no.spp)
+  for (vv in 1:no.vars)   
+  {
+    pseudo.nos <- pseudo.no.array[spa,spb,vv,]
+    data.no    <- no.array[spa,spb,vv]
+    sep.pvals[spa,spb,vv] <- mean(pseudo.nos<data.no) 
+    length(pseudo.nos[data.no<pseudo.nos])
+    sep.pvals[spb,spa,vv] <- sep.pvals[spa,spb,vv] 
+  }
+
+# Also find p value for overall NO measure.
+overall.pvals <- matrix(1,no.spp,no.spp)
+dimnames(overall.pvals) <- list(spnames,spnames)
+
+for (spa in 1:(no.spp-1)) for (spb in (spa+1):no.spp)
+{
+  temp.mat  <- pseudo.no.array[spa,spb,,]
+  pseudo.nos <- apply(temp.mat,2,mean)
+  data.no    <- no.overall.mat[spa,spb]
+  overall.pvals[spa,spb] <- mean(pseudo.nos<data.no) 
+  length(pseudo.nos[data.no<pseudo.nos])
+  overall.pvals[spb,spa] <- overall.pvals[spa,spb] 
+}
+
+#Null model analysis to determine if distribution of species is more 
+#differentiated or more clustered than expected 
+
+#reformat observed data to derive matrix of niche overlaps with one row per 
+#species, and one column for each niche dimension 
+VV <- ncol(LD.df[,-c(1:2)])
+RR <- replic   # Number of replications.
+
+no.mat <- matrix(NA,no.spp,ncol(LD.df[,-c(1:2)]))
+length(as.vector(as.dist(no.array[, , vv])))  # actual length of distance vector
+nrow(no.mat)    
+for (vv in 1:VV)
+  no.mat[,vv] <- as.vector(as.dist(no.array[,,vv]))
+
