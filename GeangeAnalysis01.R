@@ -55,7 +55,10 @@
       mutate(Dissolved_Oxygen = na_if(Dissolved_Oxygen, "NA"))
     
   #check to make sure there aren't any NAs remaining in other columns
-    LongDataCheck1 <- LongData[, !(names(LongData) %in% c("Count", "Depth_cm", "Temperature_C", "Dissolved_Oxygen", "NOTES"))]
+    LongDataCheck1 <- LongData[, !(names(LongData) %in% c("Count", "Depth_cm", 
+                                                          "Temperature_C", 
+                                                          "Dissolved_Oxygen",
+                                                          "NOTES"))]
     sum(is.na(LongDataCheck1))
   #we good if you see 0
   
@@ -65,7 +68,8 @@
   
   #remove any sampling sequence other than the first of each month 
     #define sequences to remove
-      other_sequences = c("2nd Feb", "2nd Mar", "3rd Mar", "4th Mar", "2nd Apr", "2nd May")
+      other_sequences = c("2nd Feb", "2nd Mar", "3rd Mar", "4th Mar", "2nd Apr", 
+                          "2nd May")
     #use filter function to remove them
       LongData <- LongData |>  
         filter(!(Sampling_Sequence %in% other_sequences))
@@ -436,12 +440,13 @@ temp.df <- LD.df
   
   # Add first worksheet and write ests.overall
     addWorksheet(wb, "Ests_Overall")
-    writeData(wb, sheet = "Ests_Overall", as.data.frame(NO.results$ests.overall), rowNames = TRUE)
+    writeData(wb, sheet = "Ests_Overall", as.data.frame(NO.results$ests.overall), 
+              rowNames = TRUE)
     
   # Add second worksheet and write matrix2
     addWorksheet(wb, "p_values")
-    writeData(wb, sheet = "p_values", as.data.frame(NO.results$overall.pvalues), rowNames = TRUE)
+    writeData(wb, sheet = "p_values", as.data.frame(NO.results$overall.pvalues), 
+              rowNames = TRUE)
     
   # Save workbook to a file
     saveWorkbook(wb, file = "EstsAndpValues.xlsx", overwrite = TRUE)
-  
