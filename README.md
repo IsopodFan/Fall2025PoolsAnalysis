@@ -20,6 +20,9 @@ description of files:
         
   Output files: 
     the output files are currently unorganized and lack a good naming scheme. This will be fixed later but for now I'll simply describe them here: 
+    
       - NOestimates.xlsx and Estsandpvalues.xlsx are from the first geange analysis 
+      
       - NOestimates02 and Estsandpvalues02 are from the second geange analysis; they disclude the creek and include recruitment, but do NOT include temp and O2 
+      
       - NOestimatesReg and EstsandpvaluesReg are from the second geange analysis; they disclude the creek and incldue recruitment, temp, and O2
