@@ -88,14 +88,34 @@
   #Load functions from Geange files
     source(here("ExampleAfiles", "MEE3_070_sm_NicheFunctions.txt"))
   
+ #make new LongData with just the pools (removing the creek) 
+   LongDataPools <- LongData |> 
+     filter(!(Pool_Number %in% "Creek"))
+      
+      
+  #remove uncommon groups from analysis (uncommon = prevelance under 0.5%)
+      #summarise data and sort by numerical prevelance
+      LD_counts <- LongDataPools |> 
+        group_by(Species) |> 
+        summarise(count = n()) |> 
+        mutate(percentage = (count/sum(count))*100)
+      
+      #7 groups with percentage > 1%
+      #10 groups with percentage > 0.5%
+      #18 groups with percentage > 0.1%
+      
+      species05 <- c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                     "Midge_Larvae", "Mites", "Mosquito_Larvae", "Ostracod", 
+                     "Roundworm", "Springtail") 
+      
+      LongDataPools <- LongDataPools |> 
+        filter(Species %in% species05)
+      
   #add id column and move it and species to the front
-    LongData <- LongData |> 
+    LongDataPools <- LongDataPools |> 
       mutate(id = paste0("id", row_number())) |> 
       select(id, Species, everything())
     
-  #make new LongData with just the pools (removing the creek) 
-    LongDataPools <- LongData |> 
-      filter(!(Pool_Number %in% "Creek"))
   
   #convert Depth_cm NAs into 0
     LongDataPools$Depth_cm[is.na(LongDataPools$Depth_cm)] <- 0
@@ -104,6 +124,7 @@
     LongDataPools$Depth_cm <- as.numeric(LongDataPools$Depth_cm)
     LongDataPools$Temp_Reg <- as.numeric(LongDataPools$Temp_Reg)
     LongDataPools$O2_Reg <- as.numeric(LongDataPools$O2_Reg)
+
 #SECTION 2: GEANGE ANALYSIS WITHOUT TEMP AND O2---------------------------------
 
 ##2.1: DATA PREP AND SETUP -----------------------------------------------------
