@@ -429,9 +429,9 @@
     # Test if this community is more clustered than random:
     p.all.clus <- mean(overall.data.ch < overall.pseudo.ch)
   
-##2.3: SAVE RESULTS
+##2.3: SAVE RESULTS ------------------------------------------------------------
     #save results! 
-    NO.results <- list(
+    NO_all_4axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
       NOestimates = no.array,
@@ -444,37 +444,6 @@
       overall.cluster.pvalues = p.all.clus,
       overall.differentiated.pvalues = p.all.diff)
     
-    #save results as xlsx file
-
-    #save NOestimates as a xlsx with 2 sheets, one for each niche variable
-    wb <- createWorkbook()
-    
-    for (i in 1:dim(NO.results$NOestimates)[3]) {
-      df         <- as.data.frame(NO.results$NOestimates[, , i])
-      sheet_name <- paste0("Layer_", i)
-      
-      addWorksheet(wb, sheet_name)
-      writeData(wb, sheet = sheet_name, df, rowNames = TRUE)
-    }
-    
-    # Save workbook
-    saveWorkbook(wb, file = "NOestimates02.xlsx", overwrite = TRUE)
-    
-    #save ests.overall and overall.pvalues as one xlsx
-    wb <- createWorkbook()
-    
-    # Add first worksheet and write ests.overall
-    addWorksheet(wb, "Ests_Overall")
-    writeData(wb, sheet = "Ests_Overall", as.data.frame(NO.results$ests.overall), 
-              rowNames = TRUE)
-    
-    # Add second worksheet and write matrix2
-    addWorksheet(wb, "p_values")
-    writeData(wb, sheet = "p_values", as.data.frame(NO.results$overall.pvalues), 
-              rowNames = TRUE)
-    
-    # Save workbook to a file
-    saveWorkbook(wb, file = "EstsAndpValues02.xlsx", overwrite = TRUE)
 
 #SECTION 3: (ALL TOGETHER) GEANGE ANALYSIS WITH TEMP AND O2 --------------------
     #this section performs Genage analysis on all the data, including temp and O2 
@@ -783,7 +752,7 @@
     
 ##3.3: SAVE RESULTS ------------------------------------------------------------
     #save results! 
-    NO.results <- list(
+    NO_all_6axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
       NOestimates = no.array,
@@ -795,39 +764,7 @@
       overall.pvalues = overall.pvals,
       overall.cluster.pvalues = p.all.clus,
       overall.differentiated.pvalues = p.all.diff)
-    
-    #save results as xlsx file
-    
-    #save NOestimates as a xlsx with 2 sheets, one for each niche variable
-    wb <- createWorkbook()
-    
-    for (i in 1:dim(NO.results$NOestimates)[3]) {
-      df         <- as.data.frame(NO.results$NOestimates[, , i])
-      sheet_name <- paste0("Layer_", i)
-      
-      addWorksheet(wb, sheet_name)
-      writeData(wb, sheet = sheet_name, df, rowNames = TRUE)
-    }
-    
-    # Save workbook
-    saveWorkbook(wb, file = "NOestimatesReg.xlsx", overwrite = TRUE)
-    
-    #save ests.overall and overall.pvalues as one xlsx
-    wb <- createWorkbook()
-    
-    # Add first worksheet and write ests.overall
-    addWorksheet(wb, "Ests_Overall")
-    writeData(wb, sheet = "Ests_Overall", as.data.frame(NO.results$ests.overall), 
-              rowNames = TRUE)
-    
-    # Add second worksheet and write matrix2
-    addWorksheet(wb, "p_values")
-    writeData(wb, sheet = "p_values", as.data.frame(NO.results$overall.pvalues), 
-              rowNames = TRUE)
-    
-    # Save workbook to a file
-    saveWorkbook(wb, file = "EstsAndpValuesReg.xlsx", overwrite = TRUE)
-    
+
 #SECTION 4: (YEARS SEPARATE) GEANGE ANALYSIS EXCLUDING TEMP AND O2--------------
   #this section does identical analysis to section 2 but separates data by year
   
@@ -866,8 +803,8 @@
     avail.list
     
     #separate LD.df into 2 files, one for year 0 and one for year 1
-      LD0.df <- LD.df[LD.df$Julian_Day < 365, ]
-      LD1.df <- LD.df[LD.df$Julian_Day > 365, ]
+      LD0.df <- LD.df[LD.df$Julian_Day < 365, ] 
+      LD1.df <- LD.df[LD.df$Julian_Day > 366, ]
     
       
 ##4.2: YEAR 0 GEANGE ANALYSIS --------------------------------------------------  
@@ -1436,6 +1373,8 @@
       overall.cluster.pvalues = p.all.clus,
       overall.differentiated.pvalues = p.all.diff) 
     
+      #export everything into 1 spreadsheet
+    
 #SECTION 5: NICHE OVERLAP COMPARISON (YEAR 0/1) --------------------------------
   
   #comparing all the data
@@ -1449,9 +1388,9 @@
     
   NO_Comp_boxplot <- ggplot(NO_Long.df, aes(x = group, y = value, fill = group)) +
     geom_boxplot() +
-    labs(title = "Distribution Niche Overlaps, Year 0 vs Year 1",
+    labs(title = "Niche Overlap by Year",
          x = "Year",
-         y = "Proportion of Niche Overlap") +
+         y = "Niche Overlap Proportion") +
     theme_minimal() 
    
   tNO_Comp <- t.test(NO_0, NO_1)
@@ -1485,15 +1424,15 @@
   NO_Sep_Comp_boxplot <- ggplot(NO_Long_Sep.df, aes(x = measurement_type, 
                                                     y = value, fill = year)) +
     geom_boxplot() +
-    labs(title = "Distribution Niche Overlaps by Niche Axis",
+    labs(title = "Niche Overlaps by Niche Axis",
          x = "Niche Axis",
-         y = "Proportion of Niche Overlap") +
+         y = "Niche Overlap") +
     theme_minimal() 
   
   ##Bootstrap it 
   
   set.seed(456)
-  n_boot <- 1000 
+  n_boot <- 36 
   boot_diff <- numeric(n_boot)
   
   for(i in 1:n_boot) {
@@ -1507,6 +1446,118 @@
   quantile(boot_diff, c(0.025, 0.975))
   #0 is in distribution -> difference is NOT significant  
   
+  ex.df <- data.frame( 
+    year_0 = year0, 
+    year_1 = year1
+    )
+  
+  boxplot(ex.df$year_0, ex.df$year_1)
+  
+  #ggridges with dataset separate (y0 vs y1) 
+  #export all data in into one excel sheet
+  #geange but remove winter (run march - september for both)
+  
+#SECTION 6: GGRIDGES WITH DATASETS SEPARATE ----------------------------------
+  Y0_Ridges <- LD0.df %>%
+    ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, show.legend = FALSE, color = FALSE) +
+    #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
+    scale_x_continuous(limits = c(0, 365), breaks = seq(0, 400, by = 50), expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text = element_text(size = 10),
+          #axis.text.y = element_text(size = 10, hjust = 2),
+          axis.title = element_blank(),
+          axis.line.x = element_line(linetype = "solid"))  
+  
+  Y1_Ridges <- LD1.df %>%
+    ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, show.legend = FALSE, color = FALSE) +
+    #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
+    scale_x_continuous(limits = c(366, 730), breaks = seq(350, 700, by = 50), expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text = element_text(size = 10),
+          #axis.text.y = element_text(size = 10, hjust = 2),
+          axis.title = element_blank(),
+          axis.line.x = element_line(linetype = "solid"))  
+  
+#SAVE AND COMPILE ALL DATA -----------------------------------------------------
+  View(NO_1.results)
+  NO_1.results
+  variables <- c("Julian_Day", "Pool_Number", )
+  
+  exportGeange <- function(results, filename) {
+    
+    #takes the results list from geange analysis and exports it as an xlsx file
+    #results = the name of the results list 
+    #filename = what you want the xlsx file to be called 
+      #couldn't just use the same name for both because of the dot in the results
+    
+    for (i in 1:dim(results$NOestimates)[3]) {
+      df         <- as.data.frame(results$NOestimates[, , i])
+      sheet_name <- paste0("NO_Variable_", results[["info"]][["variables"]][i])
+      
+      addWorksheet(wb, sheet_name)
+      writeData(wb, sheet = sheet_name, df, rowNames = TRUE)
+    }
+    
+    for (i in 1:dim(results$separate.pvalues)[3]) {
+      df         <- as.data.frame(results$separate.pvalues[, , i])
+      sheet_name <- paste0("pNO_Variable_", results[["info"]][["variables"]][i])
+      
+      addWorksheet(wb, sheet_name)
+      writeData(wb, sheet = sheet_name, df, rowNames = TRUE)
+    } 
+    
+    addWorksheet(wb, "Ests_Overall")
+    writeData(wb, sheet = "Ests_Overall", as.data.frame(results$ests.overall), 
+              rowNames = TRUE)
+    
+    addWorksheet(wb, "Ests_Overall_sd")
+    writeData(wb, sheet = "Ests_Overall_sd", as.data.frame(results$ests.overall.sd), 
+              rowNames = TRUE)
+    
+    addWorksheet(wb, "overall_pvalues")
+    writeData(wb, sheet = "overall_pvalues", as.data.frame(results$overall.pvalues), 
+              rowNames = TRUE)
+    
+    sep.clus.p <-  as.data.frame(results[["separate.cluster.pvalues"]])
+    sep.diff.p <-  as.data.frame(results[["separate.differentiated.pvalues"]])
+    sep.clus.p <- sep.clus.p$`results[["separate.cluster.pvalues"]]`
+    sep.diff.p <- sep.diff.p$`results[["separate.differentiated.pvalues"]]`
+    
+    sep.p <- data.frame(
+      separate.cluster.pvalues = sep.clus.p,
+      separate.differentiated.pvalues = sep.diff.p
+    )
+    
+    addWorksheet(wb, "separate_values")
+    writeData(wb, sheet = "separate_values", sep.p, 
+              rowNames = TRUE)
+    
+    overall.p <- data.frame(
+      overall.cluster.pvalues = results[["overall.cluster.pvalues"]],
+      overall.differentiated.pvalues = results[["overall.differentiated.pvalues"]]
+    )
+    
+    addWorksheet(wb, "overall_clusdiff_pvalues")
+    writeData(wb, sheet = "overall_clusdiff_pvalues", overall.p, 
+              rowNames = TRUE) 
+    
+    name = paste0(filename, ".xlsx")
+    saveWorkbook(wb, file = name, overwrite = TRUE)
+    
+  }
+  
+  wb <- createWorkbook()
+  exportGeange(NO_1.results, "Year_1")
+  wb <- createWorkbook()
+  exportGeange(NO_0.results, "Year_0")
+  wb <- createWorkbook()
+  exportGeange(NO_all_4axes.results, "Overall_4axes")
+  wb <- createWorkbook() 
+  exportGeange(NO_all_6axes.results, "Overall_6axes")
   
   
   
