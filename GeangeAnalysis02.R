@@ -1377,41 +1377,56 @@
     
 #SECTION 5: NICHE OVERLAP COMPARISON (YEAR 0/1) --------------------------------
   
-  #comparing all the data
+  #extract the upper triangle of each ests.overall matrix for year 0 and 1
   NO_0 <- NO_0.results$ests.overall[upper.tri(NO_0.results$ests.overall)] 
   NO_1 <- NO_1.results$ests.overall[upper.tri(NO_1.results$ests.overall)]
   
+  #combine the two into one dataframe that can be used for the ggplot boxplots
   NO_Long.df <- data.frame(
-    value = c(NO_0, NO_1),
-    group = factor(c(rep("Year 0", length(NO_0)), rep("Year 1", length(NO_1))))
-  )
     
+    value = c(NO_0, NO_1),
+    group = factor(c(rep("Year 0", length(NO_0)), 
+                     rep("Year 1", length(NO_1))))
+    
+  )
+  
+  #create boxplot comparing raw NO data from 0 and 1  
   NO_Comp_boxplot <- ggplot(NO_Long.df, aes(x = group, y = value, fill = group)) +
     geom_boxplot() +
     labs(title = "Niche Overlap by Year",
-         x = "Year",
-         y = "Niche Overlap Proportion") +
+         x     = "Year",
+         y     = "Niche Overlap Proportion") +
     theme_minimal() 
-   
+  
+  #ttest comparing year 0 and 1 
   tNO_Comp <- t.test(NO_0, NO_1)
     
   #not the result we expected, let's try it individually by niche axis 
+  
+  #create a function that will automatically grab the matrix we want from 
+  #the NOestimates table 
   grabmat <- function(layer, samp) {
+    
     temp <- samp$NOestimates[, , layer]
     return(temp[upper.tri(temp)])
+    
   }
   
-  NO_0.Jul <- grabmat(1, NO_0.results)
-  NO_0.Pool <- grabmat(2, NO_0.results)
-  NO_0.Rec <- grabmat(3, NO_0.results)
+  #Create vectors for the upper triangle of the matrix for each niche axis
+  #and each year
+  NO_0.Jul   <- grabmat(1, NO_0.results)
+  NO_0.Pool  <- grabmat(2, NO_0.results)
+  NO_0.Rec   <- grabmat(3, NO_0.results)
   NO_0.Depth <- grabmat(4, NO_0.results)
   
-  NO_1.Jul <- grabmat(1, NO_1.results)
-  NO_1.Pool <- grabmat(2, NO_1.results)
-  NO_1.Rec <- grabmat(3, NO_1.results)
+  NO_1.Jul   <- grabmat(1, NO_1.results)
+  NO_1.Pool  <- grabmat(2, NO_1.results)
+  NO_1.Rec   <- grabmat(3, NO_1.results)
   NO_1.Depth <- grabmat(4, NO_1.results)
   
+  #combine all of that into one dataframe that can be used to make a boxplot
   NO_Long_Sep.df <- data.frame( 
+    
     value = c(NO_0.Jul, NO_0.Pool, NO_0.Rec, NO_0.Depth, 
               NO_1.Jul, NO_1.Pool, NO_1.Rec, NO_1.Depth),
     
@@ -1419,68 +1434,319 @@
                                     "Recruitment", "Depth"), each = 36, times = 2)),
     
     year = factor(rep(c(0,1), each = 144))
+    
     )
   
+  #make the boxplot
   NO_Sep_Comp_boxplot <- ggplot(NO_Long_Sep.df, aes(x = measurement_type, 
                                                     y = value, fill = year)) +
     geom_boxplot() +
     labs(title = "Niche Overlaps by Niche Axis",
-         x = "Niche Axis",
-         y = "Niche Overlap") +
+         x     = "Niche Axis",
+         y     = "Niche Overlap") +
     theme_minimal() 
   
-  ##Bootstrap it 
+  ##Bootstrap time!! 
   
+  #bootstrap resampling the year 0 and 1 data
   set.seed(456)
-  n_boot <- 36 
+  n_boot    <- 36 
   boot_diff <- numeric(n_boot)
   
   for(i in 1:n_boot) {
-    year0 <- sample(NO_0, replace = TRUE) 
-    year1 <- sample(NO_1, replace = TRUE) 
+    year0        <- sample(NO_0, replace = TRUE) 
+    year1        <- sample(NO_1, replace = TRUE) 
     boot_diff[i] <- mean(year0) - mean(year1)
   }
   
+  #I don't really remember what I was doing here
   hist(boot_diff, main = "Bootstrap dist of mean diff", col = "lightgreen")
-
   quantile(boot_diff, c(0.025, 0.975))
   #0 is in distribution -> difference is NOT significant  
   
+  #quick and dirty boxplot in baseR comparing bootstrapped dataset
   ex.df <- data.frame( 
+    
     year_0 = year0, 
     year_1 = year1
+    
     )
   
   boxplot(ex.df$year_0, ex.df$year_1)
   
-  #ggridges with dataset separate (y0 vs y1) 
-  #export all data in into one excel sheet
-  #geange but remove winter (run march - september for both)
   
 #SECTION 6: GGRIDGES WITH DATASETS SEPARATE ----------------------------------
-  Y0_Ridges <- LD0.df %>%
+  #this section recreates the ggridges graph for each year separately
+  
+  #year 0
+  Y0_Ridges <- LD0.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
-    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, show.legend = FALSE, color = FALSE) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
     #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
-    scale_x_continuous(limits = c(0, 365), breaks = seq(0, 400, by = 50), expand = c(0, 0)) +
+    scale_x_continuous(limits = c(0, 365), 
+                       breaks = seq(0, 400, by = 50), 
+                       expand = c(0, 0)) +
     #coord_fixed(ratio = 10) +
     theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
     theme(text = element_text(size = 10),
           #axis.text.y = element_text(size = 10, hjust = 2),
-          axis.title = element_blank(),
+          axis.title  = element_blank(),
           axis.line.x = element_line(linetype = "solid"))  
   
-  Y1_Ridges <- LD1.df %>%
+  #year 1
+  Y1_Ridges <- LD1.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
-    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, show.legend = FALSE, color = FALSE) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
     #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
-    scale_x_continuous(limits = c(366, 730), breaks = seq(350, 700, by = 50), expand = c(0, 0)) +
+    scale_x_continuous(limits = c(366, 730), 
+                       breaks = seq(350, 700, by = 50), 
+                       expand = c(0, 0)) +
     #coord_fixed(ratio = 10) +
     theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
     theme(text = element_text(size = 10),
           #axis.text.y = element_text(size = 10, hjust = 2),
           axis.title = element_blank(),
-          axis.line.x = element_line(linetype = "solid"))  
+          axis.line.x = element_line(linetype = "solid")) 
+  
+  
+#SECTION 7: NICHE OVERLAP BY SPECIES -------------------------------------------
+  #this section examines the niche overlap values for each species individually
+  
+  
+  ##7.1: NICHE OVERLAP BETWEEN YEARS COMPARISON BY SPECIES ---------------------
+  #covert overlap estimates to a matrix
+  NO0_ests <- as.matrix(NO_0.results[["ests.overall"]])
+  NO1_ests <- as.matrix(NO_1.results[["ests.overall"]])
+  
+  #set the diagonals to NA so we can remove them 
+  diag(NO0_ests) <- NA 
+  diag(NO1_ests) <- NA
+  
+  #convert overlap matrices to a dataframe so we can work for it
+  NO0_ests <- as.data.frame(NO0_ests)
+  NO1_ests <- as.data.frame(NO1_ests)
+  
+  #convert all the species columns into separate vectors and remove NAs 
+  Clad0 <- NO0_ests$Cladoceran[!is.na(NO0_ests$Cladoceran)]
+  Cope0 <- NO0_ests$Copepod[!is.na(NO0_ests$Copepod)] 
+  Dipt0 <- NO0_ests$Diptera_Pupae[!is.na(NO0_ests$Diptera_Pupae)]
+  Midg0 <- NO0_ests$Midge_Larvae[!is.na(NO0_ests$Midge_Larvae)]
+  Mite0 <- NO0_ests$Mites[!is.na(NO0_ests$Mites)]
+  Mosq0 <- NO0_ests$Mosquito_Larvae[!is.na(NO0_ests$Mosquito_Larvae)]
+  Ostr0 <- NO0_ests$Ostracod[!is.na(NO0_ests$Ostracod)]
+  Roun0 <- NO0_ests$Roundworm[!is.na(NO0_ests$Roundworm)]
+  Spri0 <- NO0_ests$Springtail[!is.na(NO0_ests$Springtail)]
+  
+  Clad1 <- NO1_ests$Cladoceran[!is.na(NO1_ests$Cladoceran)] 
+  Cope1 <- NO1_ests$Copepod[!is.na(NO1_ests$Copepod)]
+  Dipt1 <- NO1_ests$Diptera_Pupae[!is.na(NO1_ests$Diptera_Pupae)]
+  Midg1 <- NO1_ests$Midge_Larvae[!is.na(NO1_ests$Midge_Larvae)]
+  Mite1 <- NO1_ests$Mites[!is.na(NO1_ests$Mites)]
+  Mosq1 <- NO1_ests$Mosquito_Larvae[!is.na(NO1_ests$Mosquito_Larvae)]
+  Ostr1 <- NO1_ests$Ostracod[!is.na(NO1_ests$Ostracod)]
+  Roun1 <- NO1_ests$Roundworm[!is.na(NO1_ests$Roundworm)]
+  Spri1 <- NO1_ests$Springtail[!is.na(NO1_ests$Springtail)]
+  
+  #turn all the above vectors into a dataframe for a boxplot
+  Ests_By_Sp.df <- data.frame(
+    
+    NO      = c(Clad0, Cope0, Dipt0, Midg0, Mite0, Mosq0, Ostr0, Roun0, Spri0, 
+                Clad1, Cope1, Dipt1, Midg1, Mite1, Mosq1, Ostr1, Roun1, Spri1),
+    Species = factor(rep(c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                           "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                           "Ostracod", "Roundworm", "Springtail"), 
+                         each = 8, times = 2)),
+    Year    = factor(rep(c(0,1), each = 72, times = 2))
+    
+    )
+  
+  #create a box plot for niche overlap estimates by species by year
+  Ests_By_Sp.boxplot <- ggplot(Ests_By_Sp.df, 
+                               aes(x = Species, y = NO, fill = Year)) + 
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Species",
+         x     = "Species",
+         y     = "Niche Overlap") +
+    theme_minimal() 
+  
+  
+  #bootstrap the values for niche overlap estimates by species by year
+  n_boot <- 8
+  for(i in 1:n_boot) { 
+    
+    Clad0_boot <- sample(Clad0, replace = TRUE)
+    Cope0_boot <- sample(Cope0, replace = TRUE)
+    Dipt0_boot <- sample(Dipt0, replace = TRUE)
+    Midg0_boot <- sample(Midg0, replace = TRUE)
+    Mite0_boot <- sample(Mite0, replace = TRUE)
+    Mosq0_boot <- sample(Mosq0, replace = TRUE)
+    Ostr0_boot <- sample(Ostr0, replace = TRUE)
+    Roun0_boot <- sample(Roun0, replace = TRUE)
+    Spri0_boot <- sample(Spri0, replace = TRUE)
+    
+    Clad1_boot <- sample(Clad1, replace = TRUE)
+    Cope1_boot <- sample(Cope1, replace = TRUE)
+    Dipt1_boot <- sample(Dipt1, replace = TRUE)
+    Midg1_boot <- sample(Midg1, replace = TRUE)
+    Mite1_boot <- sample(Mite1, replace = TRUE)
+    Mosq1_boot <- sample(Mosq1, replace = TRUE)
+    Ostr1_boot <- sample(Ostr1, replace = TRUE)
+    Roun1_boot <- sample(Roun1, replace = TRUE)
+    Spri1_boot <- sample(Spri1, replace = TRUE)
+    
+  }
+  
+  #recreate the same boxplot from above but with the bootstrapped data
+  #new dataframe
+  Ests_By_Sp.df.boot <- data.frame( 
+    
+    NO      = c(Clad0_boot, Cope0_boot, Dipt0_boot, Midg0_boot, Mite0_boot, 
+                Mosq0_boot, Ostr0_boot, Roun0_boot, Spri0_boot, 
+                Clad1_boot, Cope1_boot, Dipt1_boot, Midg1_boot, Mite1_boot, 
+                Mosq1_boot, Ostr1_boot, Roun1_boot, Spri1_boot),
+    Species = factor(rep(c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                           "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                           "Ostracod", "Roundworm", "Springtail"), 
+                          each = 8, times = 2)),
+    Year    = factor(rep(c(0,1), each = 72, times = 2))
+    
+  )
+  
+  #bootstrapped boxplot
+  Ests_By_Sp.boxplot.boot <- ggplot(Ests_By_Sp.df, 
+                                    aes(x = Species, y = NO, fill = Year)) + 
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Species by Year",
+         x     = "Species",
+         y     = "Niche Overlap") +
+    theme_minimal() 
+  
+  #ttest every pair of niche overlaps for each species between years
+  Cladt <- t.test(Clad0_boot, Clad1_boot)
+  Copet <- t.test(Cope0_boot, Cope1_boot)
+  Diptt <- t.test(Dipt0_boot, Dipt1_boot)
+  Midgt <- t.test(Midg0_boot, Midg1_boot)
+  Mitet <- t.test(Mite0_boot, Mite1_boot)
+  Mosqt <- t.test(Mosq0_boot, Mosq1_boot)
+  Ostrt <- t.test(Ostr0_boot, Ostr1_boot)
+  Rount <- t.test(Roun0_boot, Roun1_boot)
+  Sprit <- t.test(Spri0_boot, Spri1_boot) #significant
+  
+  #7.2: COMPARING EACH SPECIES OVERALL NO TO EACH OTHER (NOT SEPARATED BY YEAR)
+  
+  #run a t-test on every pair of species comparing their niche overlap values
+  
+    #combine data from bootstraps of both years into one vector for each species
+      Clad_boot <- c(Clad0_boot, Clad1_boot)
+      Cope_boot <- c(Cope0_boot, Cope1_boot)
+      Dipt_boot <- c(Dipt0_boot, Dipt1_boot)
+      Midg_boot <- c(Midg0_boot, Midg1_boot)
+      Mite_boot <- c(Mite0_boot, Mite1_boot)
+      Mosq_boot <- c(Mosq0_boot, Mosq1_boot)
+      Ostr_boot <- c(Ostr0_boot, Ostr1_boot)
+      Roun_boot <- c(Roun0_boot, Roun1_boot)
+      Spri_boot <- c(Spri0_boot, Spri1_boot)
+    
+    #turn those vectors into a list
+      NO_boot_list <- list(Clad_boot, Cope_boot, Dipt_boot, Midg_boot, Mite_boot, 
+                           Mosq_boot, Ostr_boot, Roun_boot, Spri_boot)
+    
+    #give each item in the list the correct name
+      names(NO_boot_list) <- c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                               "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                               "Ostracod", "Roundworm", "Springtail")
+   
+   #create an empty 9x9 matrix to fill in with data from our t tests
+     t_NOmatrix <- matrix(NA, nrow = 9, ncol = 9) 
+     #give the rows and columns correct names
+     rownames(t_NOmatrix) <- colnames(t_NOmatrix) <- names(NO_boot_list)
+    
+    #for loop to run a t-test for every pair of species (except for diagonals)
+     for(i in 1:9) {
+       for(j in 1:9) {
+         if(i == j) {
+           t_NOmatrix[i, j] <- NA
+         } else {
+           test             <- t.test(NO_boot_list[[i]], NO_boot_list[[j]])
+           t_NOmatrix[i, j] <- test$p.value
+         }
+       }
+      }
+   
+  
+   #round above matrix to a reasonable number of digits 
+   t_NOmatrix <- round(t_NOmatrix, 3)
+   
+   #remove all of the non-significant items
+   only_sigs_tNOmat <-  t_NOmatrix
+   only_sigs_tNOmat[only_sigs_tNOmat >= 0.05] <- NA 
+   
+   #create a dataframe for the overall, not year-separated data
+   Overall_By_Sp.df.boot <- data.frame(
+     NO = c(Clad_boot, Cope_boot, Dipt_boot, Midg_boot, Mite_boot, 
+             Mosq_boot, Ostr_boot, Roun_boot, Spri_boot),
+     Species = factor(rep(c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                            "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                            "Ostracod", "Roundworm", "Springtail"), 
+                          each = 16))
+   )
+    
+   #make a boxplot for the overall, not year-separated data
+   Overall_By_Sp.boxplot.boot <- ggplot(Overall_By_Sp.df.boot, 
+                                     aes(x = Species, y = NO, fill = Species)) + 
+     geom_boxplot() +
+     labs(title = "Overall Niche Overlap by Species",
+          x     = "Species",
+          y     = "Niche Overlap") +
+     theme_minimal() 
+
+ ##7.2: COMPARISON TO OVERALL FOR EACH SPECIES ---------------------------------
+ #grab the upper tri for the overall data
+   NO_Overall <- NO_all_4axes.results$ests.overall[
+   upper.tri(NO_all_4axes.results$ests.overall)] 
+ 
+   #bootstrap overall data
+   n_boot <- 36
+   for(i in n_boot) {
+    NO_Overall.boot <- sample(NO_Overall, replace = TRUE)
+   }
+  
+  #run a t.test comparing each species to the overall niche overlap 
+  #I did this with a for loop because I thought it would be faster and easier. 
+  #It wasn't but I'm proud of it so it's staying
+  
+    #create a vector of the shortenings I made for each species
+    spshort        <- c("Clad", "Cope", "Dipt", "Midg", "Mite", "Mosq", "Ostr",
+                        "Roun", "Spri")
+    tNO_By_Species <- 1:9
+    
+    #for loop running a ttest for each species
+    for(i in 1:9) {
+      
+      sp                <- spshort[i]
+      temp              <- get(paste0(sp, "_boot"))
+      test              <- t.test(temp, NO_Overall.boot)
+      tNO_By_Species[i] <- test$p.value 
+      
+    }
+    
+    #convert to a list so I can name the values
+    tNO_By_Species        <- as.list(tNO_By_Species)
+    names(tNO_By_Species) <- species05
+  
+  ##7.3: COMPARING TO OVERALL BY YEAR FOR EACH SPECIES -------------------------
+  
+    
+    
+    
+    
+    
+    
+    
+    
+    
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
