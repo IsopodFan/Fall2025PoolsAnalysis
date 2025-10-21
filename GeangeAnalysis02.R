@@ -1405,7 +1405,7 @@
   
   #create a function that will automatically grab the matrix we want from 
   #the NOestimates table 
-  grabmat <- function(layer, samp) {
+  grabtri <- function(layer, samp) {
     
     temp <- samp$NOestimates[, , layer]
     return(temp[upper.tri(temp)])
@@ -1414,15 +1414,15 @@
   
   #Create vectors for the upper triangle of the matrix for each niche axis
   #and each year
-  NO_0.Jul   <- grabmat(1, NO_0.results)
-  NO_0.Pool  <- grabmat(2, NO_0.results)
-  NO_0.Rec   <- grabmat(3, NO_0.results)
-  NO_0.Depth <- grabmat(4, NO_0.results)
+  NO_0.Jul   <- grabtri(1, NO_0.results)
+  NO_0.Pool  <- grabtri(2, NO_0.results)
+  NO_0.Rec   <- grabtri(3, NO_0.results)
+  NO_0.Depth <- grabtri(4, NO_0.results)
   
-  NO_1.Jul   <- grabmat(1, NO_1.results)
-  NO_1.Pool  <- grabmat(2, NO_1.results)
-  NO_1.Rec   <- grabmat(3, NO_1.results)
-  NO_1.Depth <- grabmat(4, NO_1.results)
+  NO_1.Jul   <- grabtri(1, NO_1.results)
+  NO_1.Pool  <- grabtri(2, NO_1.results)
+  NO_1.Rec   <- grabtri(3, NO_1.results)
+  NO_1.Depth <- grabtri(4, NO_1.results)
   
   #combine all of that into one dataframe that can be used to make a boxplot
   NO_Long_Sep.df <- data.frame( 
@@ -1474,12 +1474,74 @@
   
   boxplot(ex.df$year_0, ex.df$year_1)
   
+  #niche overlap for just Julian Day
+  grabmat <- function(layer, samp) {
+    
+    temp <- samp$NOestimates[, , layer]
+    return(temp)
+    
+  }
+  
+  Jul0 <- grabmat(1, NO_0.results)
+  Jul1 <- grabmat(1, NO_1.results)
+  
+  Jul0 <- as.matrix(Jul0)
+  Jul1 <- as.matrix(Jul1)
+  
+  #set the diagonals to NA so we can remove them 
+  diag(Jul0) <- NA 
+  diag(Jul1) <- NA
+  
+  #convert overlap matrices to a dataframe so we can work for it
+  Jul0 <- as.data.frame(Jul0)
+  Jul1 <- as.data.frame(Jul1)
+  
+  #convert all the species columns into separate vectors and remove NAs 
+  CladJul0 <- Jul0$Cladoceran[!is.na(Jul0$Cladoceran)]
+  CopeJul0 <- Jul0$Copepod[!is.na(Jul0$Copepod)] 
+  DiptJul0 <- Jul0$Diptera_Pupae[!is.na(Jul0$Diptera_Pupae)]
+  MidgJul0 <- Jul0$Midge_Larvae[!is.na(Jul0$Midge_Larvae)]
+  MiteJul0 <- Jul0$Mites[!is.na(Jul0$Mites)]
+  MosqJul0 <- Jul0$Mosquito_Larvae[!is.na(Jul0$Mosquito_Larvae)]
+  OstrJul0 <- Jul0$Ostracod[!is.na(Jul0$Ostracod)]
+  RounJul0 <- Jul0$Roundworm[!is.na(Jul0$Roundworm)]
+  SpriJul0 <- Jul0$Springtail[!is.na(Jul0$Springtail)]
+  
+  CladJul1 <- Jul1$Cladoceran[!is.na(Jul1$Cladoceran)]
+  CopeJul1 <- Jul1$Copepod[!is.na(Jul1$Copepod)] 
+  DiptJul1 <- Jul1$Diptera_Pupae[!is.na(Jul1$Diptera_Pupae)]
+  MidgJul1 <- Jul1$Midge_Larvae[!is.na(Jul1$Midge_Larvae)]
+  MiteJul1 <- Jul1$Mites[!is.na(Jul1$Mites)]
+  MosqJul1 <- Jul1$Mosquito_Larvae[!is.na(Jul1$Mosquito_Larvae)]
+  OstrJul1 <- Jul1$Ostracod[!is.na(Jul1$Ostracod)]
+  RounJul1 <- Jul1$Roundworm[!is.na(Jul1$Roundworm)]
+  SpriJul1 <- Jul1$Springtail[!is.na(Jul1$Springtail)]
+
+  #convert into one big df for boxplot
+  NO_Jul_Sep.df <- data.frame(
+    NO      = c(CladJul0, CopeJul0, DiptJul0, MidgJul0, MiteJul0, MosqJul0, OstrJul0, RounJul0, Spri0, 
+                CladJul1, CopeJul1, DiptJul1, MidgJul1, MiteJul1, MosqJul1, OstrJul1, RounJul1, SpriJul1),
+    Species = factor(rep(c("Cladoceran", "Copepod", "Diptera_Pupae", 
+                           "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                           "Ostracod", "Roundworm", "Springtail"), 
+                         each = 8, times = 2)),
+    Year    = factor(rep(c(0,1), each = 72))
+  )
+  
+  #make a boxplot for julian day niche overlap 
+  NO_Jul_Only.boxplot <- ggplot(NO_Jul_Sep.df, 
+                               aes(x = Species, y = NO, fill = Year)) + 
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Species (Julian Day Only)",
+         x     = "Species",
+         y     = "Niche Overlap") +
+    theme_minimal() 
   
 #SECTION 6: GGRIDGES WITH DATASETS SEPARATE ----------------------------------
   #this section recreates the ggridges graph for each year separately
   
   #year 0
-  Y0_Ridges <- LD0.df |> 
+  Jul0_Ridges <- LD0.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
     geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
                         show.legend = FALSE, color = FALSE) +
@@ -1495,7 +1557,7 @@
           axis.line.x = element_line(linetype = "solid"))  
   
   #year 1
-  Y1_Ridges <- LD1.df |> 
+  Jul1_Ridges <- LD1.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
     geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
                         show.legend = FALSE, color = FALSE) +
@@ -1509,6 +1571,91 @@
           #axis.text.y = element_text(size = 10, hjust = 2),
           axis.title = element_blank(),
           axis.line.x = element_line(linetype = "solid")) 
+  
+  JulAll_Ridges <- LD.df |> 
+    ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
+    scale_x_continuous(limits = c(0, 730), 
+                       breaks = seq(0, 700, by = 50), 
+                       expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text = element_text(size = 10),
+          #axis.text.y = element_text(size = 10, hjust = 2),
+          axis.title = element_blank(),
+          axis.line.x = element_line(linetype = "solid"))  
+  
+  DepAll_Ridges <- LD.df |> 
+    ggplot(aes(Depth_cm, reorder(species, desc(species)), fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
+    scale_x_continuous(limits = c(0, 50), 
+                       breaks = seq(0, 50, by = 10), 
+                       expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text = element_text(size = 10),
+          #axis.text.y = element_text(size = 10, hjust = 2),
+          axis.title = element_blank(),
+          axis.line.x = element_line(linetype = "solid"))  
+  
+  RecAll_Ridges <- LD.df |> 
+    ggplot(aes(Recruitment_Amount, reorder(species, desc(species)), fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    #scale_fill_manual(values=c('#117733','#7EAA44','#88CCEE','#E4BF04','#CC6677','#882255'))+
+    scale_x_continuous(limits = c(0, 600), 
+                       breaks = seq(0, 600, by = 50), 
+                       expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text = element_text(size = 10),
+          #axis.text.y = element_text(size = 10, hjust = 2),
+          axis.title = element_blank(),
+          axis.line.x = element_line(linetype = "solid"))  
+  
+  WD.df <- WideData |> 
+    select(Pool_Number, Cladoceran, Copepod, Diptera_Pupae, Midge_Larvae, Mites,
+           Mosquito_Larvae, Ostracod, Roundworm, Springtail)    |> 
+    mutate(Cladoceran      = na_if(Cladoceran, "NA"))           |>
+    mutate(Copepod         = na_if(Copepod, "NA"))              |>
+    mutate(Diptera_Pupae   = na_if(Diptera_Pupae, "NA"))        |>
+    mutate(Midge_Larvae    = na_if(Midge_Larvae, "NA"))         |>
+    mutate(Mites           = na_if(Mites, "NA"))                |>
+    mutate(Mosquito_Larvae = na_if(Mosquito_Larvae, "NA"))      |> 
+    mutate(Ostracod        = na_if(Ostracod, "NA"))             |>
+    mutate(Roundworm       = na_if(Roundworm, "NA"))            |>
+    mutate(Springtail      = na_if(Springtail, "NA"))           |> 
+    filter(!(Pool_Number %in% "Pond"))                          |>  
+    filter(!(Pool_Number %in% "Creek"))                         |> 
+    mutate(across(everything(), ~ as.numeric(as.character(.)))) |> 
+    group_by(Pool_Number)                                       |> 
+    summarise(across(everything(), sum, na.rm = TRUE))  
+  
+  WD.df <- WD.df %>%
+    pivot_longer(
+      cols = -Pool_Number,             
+      names_to = "Species",
+      values_to = "Abundance"
+    )  
+  
+  PoolAll_Bars <-  ggplot(WD.df, aes(x = Species, y = Abundance, fill = Species)) +
+    geom_col(position = "identity") +
+    facet_wrap(~ Pool_Number, ncol = 1, strip.position = "right") +  # vertical stacking
+    theme_minimal() +
+    theme(
+      strip.text = element_text(angle = 0),
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    ) +
+    labs(title = "Species Abundance Across Pools",
+         y = "Abundance",
+         x = "Species")
+  
+  
+  
   
   
 #SECTION 7: NICHE OVERLAP BY SPECIES -------------------------------------------
