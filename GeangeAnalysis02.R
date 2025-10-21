@@ -1453,7 +1453,7 @@
   n_boot    <- 36 
   boot_diff <- numeric(n_boot)
   
-  for(i in 1:n_boot) {
+  for (i in 1:n_boot) {
     year0        <- sample(NO_0, replace = TRUE) 
     year1        <- sample(NO_1, replace = TRUE) 
     boot_diff[i] <- mean(year0) - mean(year1)
@@ -1574,7 +1574,7 @@
   
   #bootstrap the values for niche overlap estimates by species by year
   n_boot <- 8
-  for(i in 1:n_boot) { 
+  for (i in 1:n_boot) { 
     
     Clad0_boot <- sample(Clad0, replace = TRUE)
     Cope0_boot <- sample(Cope0, replace = TRUE)
@@ -1664,9 +1664,9 @@
      rownames(t_NOmatrix) <- colnames(t_NOmatrix) <- names(NO_boot_list)
     
     #for loop to run a t-test for every pair of species (except for diagonals)
-     for(i in 1:9) {
-       for(j in 1:9) {
-         if(i == j) {
+     for (i in 1:9) {
+       for (j in 1:9) {
+         if (i == j) {
            t_NOmatrix[i, j] <- NA
          } else {
            test             <- t.test(NO_boot_list[[i]], NO_boot_list[[j]])
@@ -1709,7 +1709,7 @@
  
    #bootstrap overall data
    n_boot <- 36
-   for(i in n_boot) {
+   for (i in n_boot) {
     NO_Overall.boot <- sample(NO_Overall, replace = TRUE)
    }
   
@@ -1723,7 +1723,7 @@
     tNO_By_Species <- 1:9
     
     #for loop running a ttest for each species
-    for(i in 1:9) {
+    for (i in 1:9) {
       
       sp                <- spshort[i]
       temp              <- get(paste0(sp, "_boot"))
@@ -1737,16 +1737,42 @@
     names(tNO_By_Species) <- species05
   
   ##7.3: COMPARING TO OVERALL BY YEAR FOR EACH SPECIES -------------------------
-  
+    #bootstrap year 0 and 1 data
+    n_boot <- 36
+    for (i in n_boot) {
+      NO_0.boot <- sample(NO_0, replace = TRUE)
+      NO_1.boot <- sample(NO_1, replace = TRUE)
+    }
     
+    #same for loop from above for years 0 and 1
+    tNO_0 <- 1:9
+    tNO_1 <- 1:9
+    for (i in 1:9) {
+      
+      sp                <- spshort[i]
+      temp              <- get(paste0(sp, "0_boot"))
+      test              <- t.test(temp, NO_0.boot)
+      tNO_0[i]          <- test$p.value 
+      
+    }
+    for (i in 1:9) {
+      
+      sp                <- spshort[i]
+      temp              <- get(paste0(sp, "1_boot"))
+      test              <- t.test(temp, NO_1.boot)
+      print(test$p.value)
+      tNO_1[i]          <- test$p.value 
+    }
     
+    tNO_0 #only springtails are significantly different
+    tNO_1 #springtails, ostracods, and mosquito larvae significantly different
     
+    tNO_0        <- as.list(tNO_0)
+    names(tNO_0) <- species05
     
-    
-    
-    
-    
-    
+    tNO_1        <- as.list(tNO_1)
+    names(tNO_1) <- species05
+
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
