@@ -1465,14 +1465,19 @@
   #0 is in distribution -> difference is NOT significant  
   
   #quick and dirty boxplot in baseR comparing bootstrapped dataset
-  ex.df <- data.frame( 
-    
-    year_0 = year0, 
-    year_1 = year1
-    
+  NO_Sep_boot.df <- data.frame( 
+    value = c(year0, year1), 
+    year = factor(rep(c("Year 0", "Year 1"), each = 36))
     )
   
-  boxplot(ex.df$year_0, ex.df$year_1)
+  NO_Sep_boot.boxplot <- ggplot(NO_Sep_boot.df, aes(x = year, y = value, fill = year)) +
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Year",
+         x     = "Year",
+         y     = "Niche Overlap Proportion") +
+    theme_minimal() 
+  t.test(year0, year1)
+  
   
   #niche overlap for just Julian Day
   grabmat <- function(layer, samp) {
@@ -1519,7 +1524,7 @@
 
   #convert into one big df for boxplot
   NO_Jul_Sep.df <- data.frame(
-    NO      = c(CladJul0, CopeJul0, DiptJul0, MidgJul0, MiteJul0, MosqJul0, OstrJul0, RounJul0, Spri0, 
+    NO      = c(CladJul0, CopeJul0, DiptJul0, MidgJul0, MiteJul0, MosqJul0, OstrJul0, RounJul0, SpriJul0, 
                 CladJul1, CopeJul1, DiptJul1, MidgJul1, MiteJul1, MosqJul1, OstrJul1, RounJul1, SpriJul1),
     Species = factor(rep(c("Cladoceran", "Copepod", "Diptera_Pupae", 
                            "Midge_Larvae", "Mites", "Mosquito_Larvae", 
