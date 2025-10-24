@@ -1376,7 +1376,8 @@
       #export everything into 1 spreadsheet
     
 #SECTION 5: NICHE OVERLAP COMPARISON (YEAR 0/1) --------------------------------
-  
+ 
+  ##5.1: OVERALL COMPARISON ---------------------------------------------------- 
   #extract the upper triangle of each ests.overall matrix for year 0 and 1
   NO_0 <- NO_0.results$ests.overall[upper.tri(NO_0.results$ests.overall)] 
   NO_1 <- NO_1.results$ests.overall[upper.tri(NO_1.results$ests.overall)]
@@ -1402,6 +1403,8 @@
   tNO_Comp <- t.test(NO_0, NO_1)
     
   #not the result we expected, let's try it individually by niche axis 
+  
+  ##5.2: BY NICHE AXIS COMPARISON ----------------------------------------------
   
   #create a function that will automatically grab the matrix we want from 
   #the NOestimates table 
@@ -1479,7 +1482,9 @@
   t.test(year0, year1)
   
   
-  #niche overlap for just Julian Day
+  ##5.3: JULIAN DAY COMPARISON -------------------------------------------------
+  
+  #create a function that will grab the entire matrix
   grabmat <- function(layer, samp) {
     
     temp <- samp$NOestimates[, , layer]
@@ -1487,9 +1492,11 @@
     
   }
   
+  #grab the julain day matrix for each year
   Jul0 <- grabmat(1, NO_0.results)
   Jul1 <- grabmat(1, NO_1.results)
   
+  #make them a real matrix so we can use diag() function
   Jul0 <- as.matrix(Jul0)
   Jul1 <- as.matrix(Jul1)
   
@@ -1534,13 +1541,64 @@
   )
   
   #make a boxplot for julian day niche overlap 
-  NO_Jul_Only.boxplot <- ggplot(NO_Jul_Sep.df, 
+  NO_Jul_Sep.boxplot <- ggplot(NO_Jul_Sep.df, 
                                aes(x = Species, y = NO, fill = Year)) + 
     geom_boxplot() +
     labs(title = "Niche Overlap by Species (Julian Day Only)",
          x     = "Species",
          y     = "Niche Overlap") +
     theme_minimal() 
+  
+  #ok now let's just do the overall Julian day comparison 
+  
+  #use grabtri() to get just the upper triangle for both years
+  Jul0tri <- grabtri(1, NO_0.results)
+  Jul1tri <- grabtri(1, NO_1.results)
+  
+  #make into a dataframe we can use for boxplot purposes
+  NO_Jul.df <- data.frame(
+    values = c(Jul0tri, Jul1tri), 
+    year = factor(rep(c("Year 0", "Year 1"), , each = 36))
+    
+  )
+  
+  #make said boxplot
+  NO_Jul_Only.boxplot <- ggplot(NO_Jul.df, aes(x = year, y = values, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Julian Day", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(Jul0tri, Jul1tri) #not significant 
+  
+  #bootstrap it
+  set.seed(789)
+  n_boot = 36 
+  
+  for (i in n_boot) { 
+    
+    Jul0tri.boot <- sample(Jul0tri, replace = TRUE) 
+    Jul1tri.boot <- sample(Jul0tri, replace = TRUE)
+    
+    }
+  
+  #make into boxplotable dataframe
+  NO_Jul.boot.df <- data.frame(
+    values = c(Jul0tri.boot, Jul1tri.boot), 
+    year   = factor(rep(c("Year 0", "Year 1"), , each = 36))
+    
+  )
+  
+  #boxplot it
+  NO_Jul_Only.boot.boxplot <- ggplot(NO_Jul.boot.df, aes(x = year, y = values, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Julian Day (Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(Jul0tri.boot, Jul1tri.boot) # not significant
   
 #SECTION 6: GGRIDGES WITH DATASETS SEPARATE ----------------------------------
   #this section recreates the ggridges graph for each year separately
