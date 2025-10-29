@@ -21,6 +21,10 @@
     install.packages("here") 
     install.packages("openxlsx")
     install.packages("tictoc")
+    install.packages("lme4")
+    install.packages("lmerTest") 
+    install.packages("emmeans") 
+    install.packages("pbkrtest")
   
   #call packages
     library(tidyverse)
@@ -36,7 +40,11 @@
     library(abind) 
     library(here)
     library(openxlsx)
-    library(tictoc)
+    library(tictoc) 
+    library(lmer)
+    library(lmerTest) 
+    library(emmeans) 
+    library(pbkrtest)
   
   #import and prep data 
   #ensure wd is correct
@@ -803,8 +811,8 @@
     avail.list
     
     #separate LD.df into 2 files, one for year 0 and one for year 1
-      LD0.df <- LD.df[LD.df$Julian_Day < 365, ] 
-      LD1.df <- LD.df[LD.df$Julian_Day > 366, ]
+      LD0.df <- LD.df[LD.df$Julian_Day < 250, ] 
+      LD1.df <- LD.df[LD.df$Julian_Day > 250, ]
     
       
 ##4.2: YEAR 0 GEANGE ANALYSIS --------------------------------------------------  
@@ -1463,7 +1471,7 @@
   }
   
   #I don't really remember what I was doing here
-  hist(boot_diff, main = "Bootstrap dist of mean diff", col = "lightgreen")
+  hist(c(year0, year1), main = "Bootstrap dist of mean diff", col = "lightgreen")
   quantile(boot_diff, c(0.025, 0.975))
   #0 is in distribution -> difference is NOT significant  
   
@@ -1473,7 +1481,8 @@
     year = factor(rep(c("Year 0", "Year 1"), each = 36))
     )
   
-  NO_Sep_boot.boxplot <- ggplot(NO_Sep_boot.df, aes(x = year, y = value, fill = year)) +
+  NO_Sep_boot.boxplot <- ggplot(NO_Sep_boot.df, aes(x = year, 
+                                                    y = value, fill = year)) +
     geom_boxplot() +
     labs(title = "Niche Overlap by Year",
          x     = "Year",
@@ -1561,7 +1570,7 @@
     year = factor(rep(c("Year 0", "Year 1"), , each = 36))
     
   )
-  
+  NO_Jul.df
   #make said boxplot
   NO_Jul_Only.boxplot <- ggplot(NO_Jul.df, aes(x = year, y = values, fill = year)) +
     geom_boxplot() + 
@@ -1574,7 +1583,7 @@
   
   #bootstrap it
   set.seed(789)
-  n_boot = 36 
+  n_boot = 36
   
   for (i in n_boot) { 
     
@@ -1983,8 +1992,18 @@
     tNO_1        <- as.list(tNO_1)
     names(tNO_1) <- species05
 
+ 
+    
+    
+    
+  Jul.linmodel <- lm(values ~ year, data = NO_Jul.boot.df)
+  anova(Jul.linmodel)
   
-#SAVE AND COMPILE ALL DATA -----------------------------------------------------
+  
+  Jul.emmeans <- emmeans(Jul.linmodel, ~ year)
+  Jul.emmeans.df <- as.data.frame(Jul.emmeans)
+  
+#SAVE AND COMPILE ALL DATA -------Jul.emmeans.df#SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
   NO_1.results
   variables <- c("Julian_Day", "Pool_Number", )
