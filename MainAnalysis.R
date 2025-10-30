@@ -3165,7 +3165,7 @@
       width  = 0.2, 
       color  = "darkblue"
     ) +
-    geom_line(aes(group = 1), color = "gray40", linetype = "dashed") +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
     scale_x_discrete(
       limits = c("Year 0", "Year 1"),                     
       labels = c("2022", "2023")          
@@ -3175,7 +3175,12 @@
       y      = "Niche Overlap LS Mean",
       title  = "Year 0 and Year 1 Niche Overlap (LS Means)"
     ) +
-    theme_minimal(base_size = 12)
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5)   
+    )
   
   
   
