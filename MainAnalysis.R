@@ -2080,7 +2080,7 @@
   for (vv in 1:no.vars)
   {
     #slight change to the Geange code here: 
-    y <- MS0.df[[varnames[vv]]]
+    y <- SM.df[[varnames[vv]]]
     #this ensures that y is a vector, and not a 1 column tibble 
     #the latter happened with my data and not the example dataset 
     #no idea why but this seems to work 
@@ -2617,7 +2617,7 @@
     overall.differentiated.pvalues  = p.all.diff
     )
   
-  ##8.4: NO COMPARISON MAR-SEP YEAR 0/1 ----------------------------------------
+   ##8.4: NO COMPARISON MAR-SEP YEAR 0/1 ----------------------------------------
   ###extract years 0 and 1 -----------------------------------------------------
   #extract the upper triangle of each ests.overall matrix for year 0 and 1
   MS0 <- MS0.results$ests.overall[upper.tri(MS0.results$ests.overall)] 
@@ -2688,6 +2688,369 @@
     
   }
   #nevermind :(
+  
+  ## 8.5: SEP - MAR NICHE OVERLAP ----------------------------------------------
+  
+  SM.df <- LD.df[LD.df$Julian_Day > 273 & LD.df$Julian_Day < 425, ] 
+  
+  ### Geange prep --------------------------------------------------------------
+  
+  # Store some vectors of names:
+  spnames   <- sort(unique(as.character(SM.df$species)))
+  no.spp    <- length(spnames)
+  
+  varnames <- colnames(SM.df)[-(1:2)]    
+  no.vars  <- length(varnames)  
+  
+  #make a vector of variable types 
+  vartypes <- c("cts", "cat", "cts", "cts") 
+  #check they are correctly labeled: 
+  cbind(varnames,vartypes)
+  
+  # Set up a list of objects which are NULL if this is not
+  # a resource selection variable, and with the availability
+  # vector if it is resource selection.
+  avail.list        <- vector("list",no.vars)
+  names(avail.list) <- varnames
+  avail.list 
+  
+  ### Set up R objects to store results --------------------------------------
+  
+  # alpha.list
+  
+  # The object alpha.list has one component per variable.
+  # The components are NULL for ordinary variables.
+  
+  alpha.list        <- vector("list",no.vars)
+  names(alpha.list) <- varnames
+  
+  # no.array
+  
+  # Set up an array of niche overlaps.
+  # The object no.array is an array of niche overlaps.
+  # It is a 3-D array, with rows and columns being species 
+  # (a square symmetric matrix for pairwise niche overlaps), 
+  # and the layers are the dimensions for the multivariate 
+  # niche overlap measure (one dimension per variable).
+  # Rows and columns are species, layers are variables.
+  
+  
+  no.array           <- array(1,c(no.spp,no.spp,no.vars))
+  dimnames(no.array) <- list(spnames,spnames,varnames) 
+  
+  # Run through each variable in turn, identify its type,
+  # calculate the appropriate NO matrix and store it in
+  # the right layer of the no.array. 
+  
+  for (vv in 1:no.vars)
+  {
+    #slight change to the Geange code here: 
+    y <- SM.df[[varnames[vv]]]
+    #this ensures that y is a vector, and not a 1 column tibble 
+    #the latter happened with my data and not the example dataset 
+    #no idea why but this seems to work 
+    
+    #adding prints in here for trouble shooting:
+    print(paste("vv =", vv))
+    print(str(y))
+    print(paste("vartype =", vartypes[vv])) 
+    if (vartypes[vv] == "bin")
+      no.array[,,vv] <- no.bin.fn(SM.df$species,y)
+    if (vartypes[vv] == "cat")
+      no.array[,,vv] <- no.cat.fn(SM.df$species,y)
+    if (vartypes[vv] == "count")
+      no.array[,,vv] <- no.count.fn(SM.df$species,y)
+    if (vartypes[vv] == "cts")
+      no.array[,,vv] <- no.cts.fn(SM.df$species,y)
+    if (vartypes[vv] == "meas")
+      no.array[,,vv] <- no.cts.fn(SM.df$species,log(y))
+    if (vartypes[vv] == "pcent")
+      no.array[,,vv] <- no.cts.fn(SM.df$species,
+                                  log(y/(100 - y)))
+    if (vartypes[vv] == "propn")
+      no.array[,,vv] <- no.cts.fn(SM.df$species,
+                                  log(y/(1 - y)))
+    if (vartypes[vv] == "rsel")
+    {
+      
+      # Do Manly's alpha calculations, store.
+      no.choices       <- length(avail.list[[vv]])
+      choicenames      <- names(avail.list[[vv]])
+      avail.vect       <- avail.list[[vv]]
+      alpha.mat        <- alpha.fn(SM.df$species,y,avail.vect)
+      alpha.list[[vv]] <- alpha.mat         
+      
+      # Do niche overlaps, as proportions in categories:
+      no.array[,,vv] <- no.rsel.cat.fn(alpha.mat)
+    }
+  }
+  
+  #also calculate overall NO measures, averaged over dimensions
+  no.overall.mat    <- apply(no.array,c(1,2),mean)
+  no.overall.mat.sd <- apply(no.array,c(1,2),sd)
+  
+  ### Permutation Testing ------------------------------------------------
+  
+  # Permutation of the species labels would give data 
+  # satisfying the null model of complete niche overlap, 
+  # i.e. that none of the variables 
+  # serves to differentiate species into different niches.
+  
+  # Hence for each replication, permute the species labels
+  # and run through all the calculations above.
+  # Stor NOs in an array with one extra dimension, one
+  # layer for each replication.
+  # Then the null distributions are all stored.
+  # Can use the original availability data, but need a new 
+  # alpha list each time.
+  
+  # Choose no. of replications.
+  # Start low, eg. with 10 reps, to check it is working.
+  # Then do more reps, e.g. 1000 reps for 3 decimal places in p-values.
+  replic <- 1000
+  
+  pseudo.no.array           <- array(1,c(no.spp,no.spp,no.vars,replic))
+  dimnames(pseudo.no.array) <- list(spnames,spnames,varnames,NULL)
+  
+  # Set a temporary data frame, which will change each time
+  # through the cycle by having its species column permuted.
+  temp.df <- SM.df
+  
+  
+  # For each replication, permute the species labels, run the
+  # niche overlap calculations, and store the results in the
+  # pseudo NO array
+  
+  ##WARNING: 1000 REPLICATES TAKES ABOUT 11 MINUTES. REDUCE WHEN TESTING
+  
+  tic()
+  for (rr in 1:replic)
+  {
+    
+    # Permute the species labels in the temporary dataframe:
+    temp.df$species <- sample(temp.df$species)
+    for (vv in 1:no.vars)
+    {
+      
+      # Read out the column from this variable:
+      #same change to Geange code as before:
+      y <- temp.df[[varnames[vv]]]
+      
+      # Run through the variable types, do appropriate analyses:
+      if (vartypes[vv] == "bin")
+        pseudo.no.array[,,vv,rr] <- no.bin.fn(temp.df$species,y)
+      if (vartypes[vv] == "cat")
+        pseudo.no.array[,,vv,rr] <- no.cat.fn(temp.df$species,y)
+      if (vartypes[vv] == "count")
+        pseudo.no.array[,,vv,rr] <- no.count.fn(temp.df$species,y)
+      if (vartypes[vv] == "cts")
+        pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,y)
+      if (vartypes[vv] == "meas")
+        pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,log(y))
+      if (vartypes[vv] == "pcent")
+        pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
+                                              log(y/(100 - y)))
+      if (vartypes[vv] == "propn")
+        pseudo.no.array[,,vv,rr] <- no.cts.fn(temp.df$species,
+                                              log(y/(1 - y)))
+      if (vartypes[vv] == "rsel")
+      {
+        
+        # Do Manly's alpha calculations, store.
+        no.choices  <- length(avail.list[[vv]])
+        choicenames <- names(avail.list[[vv]])
+        avail.vect  <- avail.list[[vv]]
+        alpha.mat   <- alpha.fn(temp.df$species,y,avail.vect)
+        
+        # Do niche overlaps, as proportions in categories:
+        pseudo.no.array[,,vv,rr] <- no.rsel.cat.fn(alpha.mat)
+      }
+    }
+    print(paste("Rep",rr,"done"))
+  }
+  toc()
+  
+  ### null model analysis --------------------------------------------------------
+  
+  # Calculate p values for each pair of species 
+  # separately for each variable.
+  sep.pvals           <- array(1,c(no.spp,no.spp,no.vars))
+  dimnames(sep.pvals) <- list(spnames,spnames,varnames)
+  
+  for (spa in 1:(no.spp - 1)) for (spb in (spa + 1):no.spp)
+    for (vv in 1:no.vars)   
+    {
+      pseudo.nos            <- pseudo.no.array[spa,spb,vv,]
+      data.no               <- no.array[spa,spb,vv]
+      sep.pvals[spa,spb,vv] <- mean(pseudo.nos < data.no) 
+      length(pseudo.nos[data.no < pseudo.nos])
+      sep.pvals[spb,spa,vv] <- sep.pvals[spa,spb,vv] 
+    }
+  
+  # Also find p value for overall NO measure.
+  overall.pvals           <- matrix(1,no.spp,no.spp)
+  dimnames(overall.pvals) <- list(spnames,spnames)
+  
+  for (spa in 1:(no.spp - 1)) for (spb in (spa + 1):no.spp)
+  {
+    temp.mat               <- pseudo.no.array[spa,spb,,]
+    pseudo.nos             <- apply(temp.mat,2,mean)
+    data.no                <- no.overall.mat[spa,spb]
+    overall.pvals[spa,spb] <- mean(pseudo.nos < data.no) 
+    length(pseudo.nos[data.no < pseudo.nos])
+    overall.pvals[spb,spa] <- overall.pvals[spa,spb] 
+  }
+  
+  #Null model analysis to determine if distribution of species is more 
+  #differentiated or more clustered than expected 
+  
+  #reformat observed data to derive matrix of niche overlaps with one row per 
+  #species, and one column for each niche dimension 
+  VV <- ncol(SM.df[,-c(1:2)])
+  RR <- replic   # Number of replications.
+  
+  #making a slight adjustment to Geange code because it doesn't work with the  
+  #number of dimensions our array has 
+  
+  no.pairs <- no.spp * (no.spp - 1) / 2
+  no.mat   <- matrix(NA, nrow = no.pairs, ncol = VV)
+  
+  for (vv in 1:VV)
+    no.mat[, vv] <- as.vector(as.dist(no.array[, , vv]))
+  
+  # Next, reformat the pseudo data to derive a matrix of niche overlaps
+  # with one row per species, and one column for each niche dimension,
+  # with one extra dimension, one layer for each replication
+  
+  #applying the same adjustment here as before because of dimensional issues
+  pseudo.mat <- array(NA, dim = c(no.pairs, VV, RR))
+  
+  for (vv in 1:VV) for (rr in 1:RR) {
+    pseudo.mat[, vv, rr] <- as.vector(as.dist(pseudo.no.array[,, vv, rr]))
+  }
+  
+  # For each niche dimension, calculate mean and variance over the species
+  # pairs, and hence the test statistic ch = coefficient of heterogeneity.
+  # Note: Need to use variance formula based on n, not n-1.
+  
+  KK <- ncol(no.mat)      # Number of niche dimensions
+  SS <- nrow(no.mat)      # Number of species pairs
+  RR <- replic            # Number of replications.
+  
+  
+  data.ch   <- rep(NA,KK)
+  pseudo.ch <- matrix(NA,RR,KK)
+  
+  for (kk in 1:KK)
+  {
+    # Calculate data test statistic:
+    x <- mean(no.mat[,kk])
+    v <- var(no.mat[,kk])*(SS - 1)/SS # Adjust for denom n, not n-1
+    data.ch[kk] <- v/x/(1 - x)
+    
+    # Calculate test stats for all pseudo-data:
+    for (rr in 1:RR)
+    {
+      x <- mean(pseudo.mat[,kk,rr])
+      v <- var(pseudo.mat[,kk,rr])*(SS - 1)/SS
+      pseudo.ch[rr,kk] <- v/x/(1 - x)
+    }
+  }
+  
+  # For each niche dimension, see if data more differentiated than random.
+  p.dims.diff <- rep(NA,KK)
+  for (kk in 1:KK)
+    p.dims.diff[kk]  <- mean(data.ch[kk] > pseudo.ch[,kk])
+  names(p.dims.diff) <- paste("diff.dim",sort(varnames))
+  
+  # For each niche dimension, see if data more clustered than random.
+  p.dims.clus <- rep(NA,KK)
+  for (kk in 1:KK)
+    p.dims.clus[kk]  <- mean(data.ch[kk] < pseudo.ch[,kk])
+  names(p.dims.clus) <- paste("clus.dim",sort(varnames))
+  
+  # For average niche overlap, calculate mean and variance over the species
+  # pairs, and hence the test statistic ch = coefficient of heterogeneity.
+  # Note: Need to use variance formula based on n, not n-1.
+  
+  overall.data.ch   <- mean(data.ch)
+  overall.pseudo.ch <- apply(pseudo.ch,1,mean)
+  
+  # Test if this community is more differentiated than random:
+  p.all.diff <- mean(overall.data.ch > overall.pseudo.ch)
+  
+  # Test if this community is more clustered than random:
+  p.all.clus <- mean(overall.data.ch < overall.pseudo.ch)
+  
+  ###save results ------------------------------------------------------------
+  SM.results <- list(
+    info = list(variables = cbind(varnames,vartypes),
+                perm.reps = replic),
+    NOestimates = no.array,
+    separate.pvalues = sep.pvals,
+    separate.cluster.pvalues = p.dims.clus,
+    separate.differentiated.pvalues = p.dims.diff,
+    ests.overall = no.overall.mat,
+    ests.overall.sd = no.overall.mat.sd,
+    overall.pvalues = overall.pvals,
+    overall.cluster.pvalues = p.all.clus,
+    overall.differentiated.pvalues = p.all.diff)
+  
+  ### NO comparison ------------------------------------------------------------ 
+  
+  SM <- SM.results$ests.overall[upper.tri(SM.results$ests.overall)] 
+  
+  SM_Long.df <- data.frame(
+    
+    NO = c(MS0, SM, MS1),
+    year = factor(c(rep("Year 0", length(MS0)),
+                     rep("Sep - Mar", length(SM)),
+                     rep("Year 1", length(MS1))))
+    
+  )
+  
+  #create boxplot comparing raw NO data from 0 and 1  
+  SM_Comp.boxplot <- ggplot(SM_Long.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Year including Winter",
+         x     = "Year",
+         y     = "Niche Overlap Proportion") +
+    theme_minimal() 
+  
+  #ttest comparing year 0 and 1 
+  t0SM_Comp <- t.test(MS0, SM) #***
+  t1SM_Comp <- t.test(MS1, SM) #***
+  tMS_Comp  <- t.test(MS0, MS1)
+  
+  ###bootstrap it --------------------------------------------------------------
+  n_boot <- 36 
+  for (i in 1:n_boot) { 
+    
+    year0  <- sample(MS0.na, replace = TRUE)
+    year1  <- sample(MS1, replace = TRUE)
+    SepMar <- sample(SM, replace = TRUE)
+    
+  }
+  
+  SM_Comp.boot.df <- data.frame( 
+    
+    NO = c(year0, year1, SepMar), 
+    year = factor(c(rep("Year 0", length(year0)), 
+                    rep("Year 1", length(year1)), 
+                    rep("Sep - Mar", length(SepMar))))
+    
+  )
+  
+  SM_Comp.boot.boxplot <- ggplot(SM_Comp.boot.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Year including Sep - Mar (Boostrapped)",
+         x     = "Year",
+         y     = "Niche Overlap Proportion") +
+    theme_minimal() 
+  
+  t.test(year0, SepMar) #***
+  t.test(year1, SepMar) #***
+  t.test(year0, year1)
 
 #SECTION 9: LINEAR MODELS ------------------------------------------------------
   
@@ -2773,11 +3136,20 @@
   t.test(JulMS0.tri.boot, JulMS1.tri.boot) # SIGNIFICANT???
   
   ###lin model -----------------------------------------------------------------
+  
   JulMS.linmodel   <- lm(NO ~ year, data = JulMS.boot.df)
   anova(JulMS.linmodel) #SIGNIFICANT
   
   JulMS.emmeans    <- emmeans(JulMS.linmodel, ~ year)
   JulMS.emmeans.df <- as.data.frame(JulMS.emmeans)
+  
+  ## SEP - MAR DATA ------------------------------------------------------------
+  
+  SM.linmodel   <- lm(NO ~ year, data = SM_Comp.boot.df) 
+  anova(SM.linmodel) #** 
+  
+  SM.emmeans    <- emmeans(SM.linmodel, ~ year) 
+  SM.emmeans.df <- as.data.frame(SM.emmeans)
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
