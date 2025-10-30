@@ -442,15 +442,15 @@
     NO_all_4axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
-      NOestimates = no.array,
-      separate.pvalues = sep.pvals,
-      separate.cluster.pvalues = p.dims.clus,
+      NOestimates                     = no.array,
+      separate.pvalues                = sep.pvals,
+      separate.cluster.pvalues        = p.dims.clus,
       separate.differentiated.pvalues = p.dims.diff,
-      ests.overall = no.overall.mat,
-      ests.overall.sd = no.overall.mat.sd,
-      overall.pvalues = overall.pvals,
-      overall.cluster.pvalues = p.all.clus,
-      overall.differentiated.pvalues = p.all.diff)
+      ests.overall                    = no.overall.mat,
+      ests.overall.sd                 = no.overall.mat.sd,
+      overall.pvalues                 = overall.pvals,
+      overall.cluster.pvalues         = p.all.clus,
+      overall.differentiated.pvalues  = p.all.diff)
     
 
 #SECTION 3: (ALL TOGETHER) GEANGE ANALYSIS WITH TEMP AND O2 --------------------
@@ -763,15 +763,15 @@
     NO_all_6axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
-      NOestimates = no.array,
-      separate.pvalues = sep.pvals,
-      separate.cluster.pvalues = p.dims.clus,
+      NOestimates                     = no.array,
+      separate.pvalues                = sep.pvals,
+      separate.cluster.pvalues        = p.dims.clus,
       separate.differentiated.pvalues = p.dims.diff,
-      ests.overall = no.overall.mat,
-      ests.overall.sd = no.overall.mat.sd,
-      overall.pvalues = overall.pvals,
-      overall.cluster.pvalues = p.all.clus,
-      overall.differentiated.pvalues = p.all.diff)
+      ests.overall                    = no.overall.mat,
+      ests.overall.sd                 = no.overall.mat.sd,
+      overall.pvalues                 = overall.pvals,
+      overall.cluster.pvalues         = p.all.clus,
+      overall.differentiated.pvalues  = p.all.diff)
 
 #SECTION 4: (YEARS SEPARATE) GEANGE ANALYSIS EXCLUDING TEMP AND O2--------------
   #this section does identical analysis to section 2 but separates data by year
@@ -1088,15 +1088,15 @@
     NO_0.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
-      NOestimates = no.array,
-      separate.pvalues = sep.pvals,
-      separate.cluster.pvalues = p.dims.clus,
+      NOestimates                     = no.array,
+      separate.pvalues                = sep.pvals,
+      separate.cluster.pvalues        = p.dims.clus,
       separate.differentiated.pvalues = p.dims.diff,
-      ests.overall = no.overall.mat,
-      ests.overall.sd = no.overall.mat.sd,
-      overall.pvalues = overall.pvals,
-      overall.cluster.pvalues = p.all.clus,
-      overall.differentiated.pvalues = p.all.diff)
+      ests.overall                    = no.overall.mat,
+      ests.overall.sd                 = no.overall.mat.sd,
+      overall.pvalues                 = overall.pvals,
+      overall.cluster.pvalues         = p.all.clus,
+      overall.differentiated.pvalues  = p.all.diff)
     
 ##4.3: YEAR 1 GEANGE ANALYSIS ---------------------------------------------------
     ### Set up R objects to store results --------------------------------------
@@ -1371,15 +1371,15 @@
     NO_1.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
-      NOestimates = no.array,
-      separate.pvalues = sep.pvals,
-      separate.cluster.pvalues = p.dims.clus,
+      NOestimates                     = no.array,
+      separate.pvalues                = sep.pvals,
+      separate.cluster.pvalues        = p.dims.clus,
       separate.differentiated.pvalues = p.dims.diff,
-      ests.overall = no.overall.mat,
-      ests.overall.sd = no.overall.mat.sd,
-      overall.pvalues = overall.pvals,
-      overall.cluster.pvalues = p.all.clus,
-      overall.differentiated.pvalues = p.all.diff) 
+      ests.overall                    = no.overall.mat,
+      ests.overall.sd                 = no.overall.mat.sd,
+      overall.pvalues                 = overall.pvals,
+      overall.cluster.pvalues         = p.all.clus,
+      overall.differentiated.pvalues  = p.all.diff) 
     
       #export everything into 1 spreadsheet
     
@@ -2319,17 +2319,16 @@
   
   ###save results ------------------------------------------------------------
   MS0.results <- list(
-    info = list(variables = cbind(varnames,vartypes),
-                perm.reps = replic),
-    NOestimates = no.array,
-    separate.pvalues = sep.pvals,
-    separate.cluster.pvalues = p.dims.clus,
+    info = list(variables = cbind(varnames,vartypes), perm.reps = replic),
+    NOestimates                     = no.array,
+    separate.pvalues                = sep.pvals,
+    separate.cluster.pvalues        = p.dims.clus,
     separate.differentiated.pvalues = p.dims.diff,
-    ests.overall = no.overall.mat,
-    ests.overall.sd = no.overall.mat.sd,
-    overall.pvalues = overall.pvals,
-    overall.cluster.pvalues = p.all.clus,
-    overall.differentiated.pvalues = p.all.diff)
+    ests.overall                    = no.overall.mat,
+    ests.overall.sd                 = no.overall.mat.sd,
+    overall.pvalues                 = overall.pvals,
+    overall.cluster.pvalues         = p.all.clus,
+    overall.differentiated.pvalues  = p.all.diff)
   
   ##8.3: YEAR 1 ----------------------------------------------------------------
   
@@ -2618,7 +2617,9 @@
     )
   
    ##8.4: NO COMPARISON MAR-SEP YEAR 0/1 ----------------------------------------
+  
   ###extract years 0 and 1 -----------------------------------------------------
+  
   #extract the upper triangle of each ests.overall matrix for year 0 and 1
   MS0 <- MS0.results$ests.overall[upper.tri(MS0.results$ests.overall)] 
   MS1 <- MS1.results$ests.overall[upper.tri(MS1.results$ests.overall)]
@@ -2986,15 +2987,15 @@
   SM.results <- list(
     info = list(variables = cbind(varnames,vartypes),
                 perm.reps = replic),
-    NOestimates = no.array,
-    separate.pvalues = sep.pvals,
-    separate.cluster.pvalues = p.dims.clus,
+    NOestimates                     = no.array,
+    separate.pvalues                = sep.pvals,
+    separate.cluster.pvalues        = p.dims.clus,
     separate.differentiated.pvalues = p.dims.diff,
-    ests.overall = no.overall.mat,
-    ests.overall.sd = no.overall.mat.sd,
-    overall.pvalues = overall.pvals,
-    overall.cluster.pvalues = p.all.clus,
-    overall.differentiated.pvalues = p.all.diff)
+    ests.overall                    = no.overall.mat,
+    ests.overall.sd                 = no.overall.mat.sd,
+    overall.pvalues                 = overall.pvals,
+    overall.cluster.pvalues         = p.all.clus,
+    overall.differentiated.pvalues  = p.all.diff)
   
   ### NO comparison ------------------------------------------------------------ 
   
@@ -3004,8 +3005,8 @@
     
     NO = c(MS0, SM, MS1),
     year = factor(c(rep("Year 0", length(MS0)),
-                     rep("Sep - Mar", length(SM)),
-                     rep("Year 1", length(MS1))))
+                    rep("Sep - Mar", length(SM)),
+                    rep("Year 1", length(MS1))))
     
   )
   
@@ -3034,14 +3035,16 @@
   
   SM_Comp.boot.df <- data.frame( 
     
-    NO = c(year0, year1, SepMar), 
+    NO   = c(year0, year1, SepMar), 
     year = factor(c(rep("Year 0", length(year0)), 
                     rep("Year 1", length(year1)), 
                     rep("Sep - Mar", length(SepMar))))
     
   )
   
-  SM_Comp.boot.boxplot <- ggplot(SM_Comp.boot.df, aes(x = year, y = NO, fill = year)) +
+  SM_Comp.boot.boxplot <- ggplot(SM_Comp.boot.df, aes(x    = year, 
+                                                      y    = NO, 
+                                                      fill = year)) +
     geom_boxplot() +
     labs(title = "Niche Overlap by Year including Sep - Mar (Boostrapped)",
          x     = "Year",
@@ -3092,7 +3095,7 @@
     
     NO     = c(JulMS0.tri, JulMS1.tri), 
     year   = factor(c(rep("Year 0", length(JulMS0.tri)), 
-                    rep("Year 1", length(JulMS1.tri))))
+                      rep("Year 1", length(JulMS1.tri))))
     
   )
   
@@ -3126,7 +3129,9 @@
   )
   
   #boxplot it
-  JulMS.boot.boxplot <- ggplot(JulMS.boot.df, aes(x = year, y = NO, fill = year)) +
+  JulMS.boot.boxplot <- ggplot(JulMS.boot.df, aes(x    = year,  
+                                                  y    = NO,  
+                                                  fill = year)) +
     geom_boxplot() + 
     labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Julian Day (Bootstrapped)", 
          x     = "Year", 
@@ -3143,13 +3148,36 @@
   JulMS.emmeans    <- emmeans(JulMS.linmodel, ~ year)
   JulMS.emmeans.df <- as.data.frame(JulMS.emmeans)
   
-  ## SEP - MAR DATA ------------------------------------------------------------
+  ## 9.5: SEP - MAR DATA ------------------------------------------------------------
   
   SM.linmodel   <- lm(NO ~ year, data = SM_Comp.boot.df) 
   anova(SM.linmodel) #** 
   
   SM.emmeans    <- emmeans(SM.linmodel, ~ year) 
-  SM.emmeans.df <- as.data.frame(SM.emmeans)
+  SM.emeans.df  <- as.data.frame(SM.emmeans)
+  
+  ## 9.6: MARIANA GRAPHS 
+  
+  MS.emeans.point <- ggplot(MS.emeans.df, aes(x = year, y = emmean)) +
+    geom_point(size = 4, color = "darkblue") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "darkblue"
+    ) +
+    geom_line(aes(group = 1), color = "gray40", linetype = "dashed") +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year (March - September Only)",
+      y      = "Niche Overlap LS Mean",
+      title  = "Year 0 and Year 1 Niche Overlap (LS Means)"
+    ) +
+    theme_minimal(base_size = 12)
+  
+  
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
