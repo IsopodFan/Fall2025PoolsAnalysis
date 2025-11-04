@@ -133,6 +133,7 @@
     LongDataPools$Temp_Reg <- as.numeric(LongDataPools$Temp_Reg)
     LongDataPools$O2_Reg <- as.numeric(LongDataPools$O2_Reg)
 
+    n_boot <- 36
 #SECTION 2: (ALL TOGETHER) GEANGE ANALYSIS WITHOUT TEMP AND O2------------------
   #this section performs Genage analysis on all the data, excluding temp and O2 
   #data and not separating by year
@@ -2080,7 +2081,7 @@
   for (vv in 1:no.vars)
   {
     #slight change to the Geange code here: 
-    y <- SM.df[[varnames[vv]]]
+    y <- MS0.df[[varnames[vv]]]
     #this ensures that y is a vector, and not a 1 column tibble 
     #the latter happened with my data and not the example dataset 
     #no idea why but this seems to work 
@@ -3156,7 +3157,7 @@
   SM.emmeans    <- emmeans(SM.linmodel, ~ year) 
   SM.emeans.df  <- as.data.frame(SM.emmeans)
   
-  ## 9.6: MARIANA GRAPHS 
+  ## 9.6: MARIANA GRAPHS ------------------------------------------------------
   
   MS.emeans.point <- ggplot(MS.emeans.df, aes(x = year, y = emmean)) +
     geom_point(size = 4, color = "darkblue") +
@@ -3183,6 +3184,52 @@
     )
   
   
+#SECTION 10: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
+  
+  install.packages("viridis") 
+  library(viridis)
+  
+  ##FIGURE 1: Populations over time --------------------------------------------
+  
+  fig1.df <- LD.df |> 
+    mutate(species = recode(species, "Roundworm"       = "Nematodes", 
+                                     "Mosquito_Larvae" = "Mosquito Larvae", 
+                                     "Ostracod"        = "Ostracods", 
+                                     "Springtail"      = "Springtails", 
+                                     "Midge_Larvae"    = "Midge Larvae", 
+                                     "Diptera_Pupae"   = "Diptera Pupae", 
+                                     "Copepod"         = "Copepods", 
+                                     "Cladoceran"      = "Cladocerans"))
+  
+  JulAll.ridges <- fig1.df |> 
+    ggplot(aes(Julian_Day, species, fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend    = TRUE, color = FALSE) +
+    scale_fill_manual(values = c('#009e74', '#0071b2', '#56b3e9', 
+                                 '#f0e442', '#e69f00', '#d55c00', 
+                                 '#cc79a7', '#7e2954', '#1b1557')) + 
+    scale_x_continuous(limits = c(0, 730), 
+                       breaks = seq(0, 700, by = 100), 
+                       expand = c(0, 0)) +
+    #coord_fixed(ratio = 10) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text               = element_text(size = 10),
+          axis.text.y        = element_text(size = 10), 
+          axis.text.x        = element_text(size = 10),
+          axis.title.x       = element_text(size = 12),
+          axis.line.y        = element_line(linetype  = "solid", 
+                                            color     = "black", 
+                                            linewidth = 0.5),
+          axis.line.x        = element_line(linetype  = "solid"), 
+          panel.grid.major.x = element_blank(),
+          legend.position    = "none") +
+    labs( 
+      x     = "Days Since January 1st, 2022", 
+      y     = NULL,
+      title = "Species Population Density Over Time",
+      fill  = "Species")
+  
+  #
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
