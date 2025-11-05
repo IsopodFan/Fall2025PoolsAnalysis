@@ -53,21 +53,21 @@
     WideData <- read_excel(here("PoolsDataWReg.xlsx"))
   #flip data
     LongData <- gather(data  = WideData, 
-                      key   = "Species", 
-                      value = "Count", "Ostracod":"Springtail") 
+                       key   = "Species", 
+                       value = "Count", "Ostracod":"Springtail") 
   
   #turn NA strings into real R na values
    LongData <- LongData |> 
-      mutate(Count            = na_if(Count, "NA")) |> 
+      mutate(Count            = na_if(Count, "NA"))    |> 
       mutate(Depth_cm         = na_if(Depth_cm, "NA")) |> 
       mutate(Temperature_C    = na_if(Temp_Reg, "NA")) |> 
       mutate(Dissolved_Oxygen = na_if(O2_Reg, "NA"))
   
   #check to make sure there aren't any NAs remaining in other columns
     sum(is.na(LongData[, !(names(LongData) %in% c("Count", "Depth_cm", 
-                                                                    "Temperature_C", 
-                                                                    "Dissolved_Oxygen",
-                                                                    "NOTES"))]))
+                                                  "Temperature_C", 
+                                                  "Dissolved_Oxygen",
+                                                  "NOTES"))]))
     #we good if you see 0
   
   #turn Count column into numeric
@@ -104,8 +104,8 @@
   #remove uncommon groups from analysis (uncommon = prevelance under 0.5%)
       #summarise data and sort by numerical prevelance
       LD_counts <- LongDataPools |> 
-        group_by(Species) |> 
-        summarise(count = n()) |> 
+        group_by(Species)        |> 
+        summarise(count   = n()) |> 
         mutate(percentage = (count/sum(count))*100)
       
       #7 groups with percentage > 1%
@@ -113,14 +113,14 @@
       #18 groups with percentage > 0.1%
       
       species05 <- c("Cladoceran", "Copepod", "Diptera_Pupae", 
-                     "Midge_Larvae", "Mites", "Mosquito_Larvae", "Ostracod", 
-                     "Roundworm", "Springtail") 
+                     "Midge_Larvae", "Mites", "Mosquito_Larvae", 
+                     "Ostracod", "Roundworm", "Springtail") 
       
       LongDataPools <- LongDataPools |> 
         filter(Species %in% species05)
       
   #add id column and move it and species to the front
-    LongDataPools <- LongDataPools |> 
+    LongDataPools <- LongDataPools            |> 
       mutate(id = paste0("id", row_number())) |> 
       select(id, Species, everything())
     
@@ -131,7 +131,7 @@
   #convert columns into number 
     LongDataPools$Depth_cm <- as.numeric(LongDataPools$Depth_cm)
     LongDataPools$Temp_Reg <- as.numeric(LongDataPools$Temp_Reg)
-    LongDataPools$O2_Reg <- as.numeric(LongDataPools$O2_Reg)
+    LongDataPools$O2_Reg   <- as.numeric(LongDataPools$O2_Reg)
 
     n_boot <- 36
 #SECTION 2: (ALL TOGETHER) GEANGE ANALYSIS WITHOUT TEMP AND O2------------------
@@ -2668,7 +2668,7 @@
          x     = "Year",
          y     = "Niche Overlap Proportion") +
     theme_minimal() 
-
+  MS_Comp.boot.boxplot
   t.test(year0, year1) #probably insignificant
   
   #lemme try something... 
@@ -3183,15 +3183,39 @@
       axis.line.y = element_line(color = "gray35", linewidth = 0.5)   
     )
   
+  JulMS.emmeans.point <- ggplot(JulMS.emmeans.df, aes(x = year, y = emmean)) +
+    geom_point(size = 4, color = "darkblue") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "darkblue"
+    ) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year (March - September Only)",
+      y      = "Niche Overlap LS Mean",
+      title  = "Year 0 and Year 1 Niche Overlap (LS Means)"
+    ) +
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5)   
+    )
+  
   
 #SECTION 10: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
   
   install.packages("viridis") 
   library(viridis)
   
-  ##FIGURE 1: Populations over time --------------------------------------------
+  ##FIGURE 1: Population density over time -------------------------------------
   
-  fig1.df <- LD.df |> 
+  figs.df <- LD.df |> 
     mutate(species = recode(species, "Roundworm"       = "Nematodes", 
                                      "Mosquito_Larvae" = "Mosquito Larvae", 
                                      "Ostracod"        = "Ostracods", 
@@ -3201,7 +3225,7 @@
                                      "Copepod"         = "Copepods", 
                                      "Cladoceran"      = "Cladocerans"))
   
-  JulAll.ridges <- fig1.df |> 
+  JulAll.ridges <- figs.df |> 
     ggplot(aes(Julian_Day, species, fill = species)) +
     geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
                         show.legend    = TRUE, color = FALSE) +
@@ -3229,7 +3253,124 @@
       title = "Species Population Density Over Time",
       fill  = "Species")
   
-  #
+  ##FIGURE 2: Depth axis ------------------------------------------------------- 
+  
+  Depth.ridges <- figs.df |> 
+    ggplot(aes(Depth_cm, species, fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    scale_fill_manual(values = c('#009e74', '#0071b2', '#56b3e9', 
+                                 '#f0e442', '#e69f00', '#d55c00', 
+                                 '#cc79a7', '#7e2954', '#1b1557')) +
+    scale_x_continuous(limits = c(0, 50), 
+                       breaks = seq(0, 50, by = 10), 
+                       expand = c(0, 0)) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text               = element_text(size = 10),
+          axis.text.y        = element_text(size = 10), 
+          axis.text.x        = element_text(size = 10),
+          axis.title.x       = element_text(size = 12),
+          axis.line.y        = element_line(linetype  = "solid", 
+                                            color     = "black", 
+                                            linewidth = 0.5),
+          axis.line.x        = element_line(linetype  = "solid"), 
+          panel.grid.major.x = element_blank(),
+          legend.position    = "none") +
+    labs( 
+      x     = "Pool Depth (cm)", 
+      y     = NULL,
+      title = "Species Population Density by Pool Depth",
+      fill  = "Species")  
+  
+  ##FIGURE 3: Recruitment Axis ------------------------------------------------- 
+  
+  Rec.ridges <- figs.df |> 
+    ggplot(aes(Recruitment_Amount, species, fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    scale_fill_manual(values = c('#009e74', '#0071b2', '#56b3e9', 
+                                 '#f0e442', '#e69f00', '#d55c00', 
+                                 '#cc79a7', '#7e2954', '#1b1557')) +
+    scale_x_continuous(limits = c(0, 600), 
+                       breaks = seq(0, 600, by = 50), 
+                       expand = c(0, 0)) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text               = element_text(size = 10),
+          axis.text.y        = element_text(size = 10), 
+          axis.text.x        = element_text(size = 10),
+          axis.title.x       = element_text(size = 12),
+          axis.line.y        = element_line(linetype  = "solid", 
+                                            color     = "black", 
+                                            linewidth = 0.5),
+          axis.line.x        = element_line(linetype  = "solid"), 
+          panel.grid.major.x = element_blank(),
+          legend.position    = "none") +
+    labs( 
+      x     = "Recruitment Amount (Number of Individuals Per Sample)", 
+      y     = NULL,
+      title = "Species Population Density By Recruitment Amount",
+      fill  = "Species") 
+  
+  ##FIGURE 4: MAR-SEP OVERALL NICHE OVERLAP ------------------------------------
+   MS.boxplot <- ggplot(MS_Comp.boot.df, aes(x    = year, 
+                                                       y    = NO, 
+                                                       fill = year)) +
+    geom_boxplot() +
+    labs(title = "Niche Overlap by Year, March - September ONLY (Boostrapped)",
+         x     = "Year",
+         y     = "Niche Overlap Proportion") + 
+    theme_minimal() + 
+    theme(legend.position = "none") + 
+    scale_fill_manual(values = c('#56b3e9', '#7e2954')) +  
+    scale_x_discrete(labels = c(
+      "Year 0" = "2022", 
+      "Year 1" = "2023"
+    )) +
+    labs( 
+      x     = "Year (March - September Only)", 
+      y     = "Proportion of Niche Overlap",
+      title = "Overall Niche Overlaps, 2022 vs 2023",
+      fill  = "Species") + 
+    theme(
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 14), 
+      axis.title.y = element_text(size = 14), 
+      title = element_text(size = 13)
+    )
+  
+  ##FIGURE 5: Julian Day Data Mar-Sep ------------------------------------------
+  JulMS.point <- ggplot(JulMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year (March - September Only)",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Temporal Niche Overlap, 2022 vs 2023"
+    ) +
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 14), 
+      axis.title.y = element_text(size = 14), 
+      title = element_text(size = 12), 
+      legend.position = "none"
+    )
+  JulMS.point
+  
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
