@@ -3072,7 +3072,7 @@
   anova(MS.linmodel) #significant?
   
   MS.emmeans   <- emmeans(MS.linmodel, ~year)
-  MS.emeans.df <- as.data.frame(MS.emmeans)
+  MS.emmeans.df <- as.data.frame(MS.emmeans)
   
   ##9.3: ALL DATA  -------------------------------------------------------------
   
@@ -3207,14 +3207,148 @@
       axis.line.y = element_line(color = "gray35", linewidth = 0.5)   
     )
   
+#SECTION 10: OTHER NICHE AXES SEPARATE -----------------------------------------
+  ##10.1: DEPTH ----------------------------------------------------------------
   
-#SECTION 10: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
+  ###boxplot  ------------------------------------------------------------------
+  #use grabtri() to get just the upper triangle for both years
+  DepMS0.tri <- grabtri(4, MS0.results)
+  DepMS1.tri <- grabtri(4, MS1.results)
+  DepMS0.tri <- DepMS0.tri[!is.na(DepMS0.tri)]
+  
+  #make into a dataframe we can use for boxplot purposes
+  
+  DepMS.df <- data.frame(
+    
+    NO     = c(DepMS0.tri, DepMS1.tri), 
+    year   = factor(c(rep("Year 0", length(DepMS0.tri)), 
+                      rep("Year 1", length(DepMS1.tri))))
+    
+  )
+  
+  #make said boxplot
+  DepMS.boxplot <- ggplot(DepMS.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Depth (Mar - Sep)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(DepMS0.tri, DepMS1.tri) #not significant 
+  
+  ###bootstrap -------------------------------------------------------------------
+  set.seed(789)
+  n_boot = 36
+  
+  for (i in 1:n_boot) { 
+    
+    DepMS0.tri.boot <- sample(DepMS0.tri, replace = TRUE) 
+    DepMS1.tri.boot <- sample(DepMS1.tri, replace = TRUE)
+    
+  }
+  
+  #make into boxplotable dataframe
+  DepMS.boot.df <- data.frame(
+    NO     = c(DepMS0.tri.boot, DepMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(DepMS0.tri.boot)), 
+                      rep("Year 1", length(DepMS1.tri.boot))))
+    
+  )
+  
+  #boxplot it
+  DepMS.boot.boxplot <- ggplot(DepMS.boot.df, aes(x    = year,  
+                                                  y    = NO,  
+                                                  fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Depth (Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(DepMS0.tri.boot, DepMS1.tri.boot) # SIGNIFICANT???
+  
+  ###lin model -----------------------------------------------------------------
+  
+  DepMS.linmodel   <- lm(NO ~ year, data = DepMS.boot.df)
+  anova(DepMS.linmodel) #not significant
+  
+  DepMS.emmeans    <- emmeans(DepMS.linmodel, ~ year)
+  DepMS.emmeans.df <- as.data.frame(DepMS.emmeans)
+  
+  ##10.2: RECRUITMENT ----------------------------------------------------------
+  
+  ###boxplot  ------------------------------------------------------------------
+  #use grabtri() to get just the upper triangle for both years
+  DepMS0.tri <- grabtri(4, MS0.results)
+  DepMS1.tri <- grabtri(4, MS1.results)
+  DepMS0.tri <- DepMS0.tri[!is.na(DepMS0.tri)]
+  
+  #make into a dataframe we can use for boxplot purposes
+  
+  DepMS.df <- data.frame(
+    
+    NO     = c(DepMS0.tri, DepMS1.tri), 
+    year   = factor(c(rep("Year 0", length(DepMS0.tri)), 
+                      rep("Year 1", length(DepMS1.tri))))
+    
+  )
+  
+  #make said boxplot
+  DepMS.boxplot <- ggplot(DepMS.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Depth (Mar - Sep)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(DepMS0.tri, DepMS1.tri) #not significant 
+  
+  ###bootstrap -------------------------------------------------------------------
+  set.seed(789)
+  n_boot = 36
+  
+  for (i in 1:n_boot) { 
+    
+    DepMS0.tri.boot <- sample(DepMS0.tri, replace = TRUE) 
+    DepMS1.tri.boot <- sample(DepMS1.tri, replace = TRUE)
+    
+  }
+  
+  #make into boxplotable dataframe
+  DepMS.boot.df <- data.frame(
+    NO     = c(DepMS0.tri.boot, DepMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(DepMS0.tri.boot)), 
+                      rep("Year 1", length(DepMS1.tri.boot))))
+    
+  )
+  
+  #boxplot it
+  DepMS.boot.boxplot <- ggplot(DepMS.boot.df, aes(x    = year,  
+                                                  y    = NO,  
+                                                  fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Depth (Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(DepMS0.tri.boot, DepMS1.tri.boot) # SIGNIFICANT???
+  
+  ###lin model -----------------------------------------------------------------
+  
+  DepMS.linmodel   <- lm(NO ~ year, data = DepMS.boot.df)
+  anova(DepMS.linmodel) #not significant
+  
+  DepMS.emmeans    <- emmeans(DepMS.linmodel, ~ year)
+  DepMS.emmeans.df <- as.data.frame(DepMS.emmeans)
+  
+#SECTION 11: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
   
   install.packages("viridis") 
   library(viridis)
   
-  ##FIGURE 1: Population density over time -------------------------------------
-  
+  ##11.1: RIDGES GRAPHS --------------------------------------------------------
+  ###FIGURE 1a: Julian Day -----------------------------------------------------
   figs.df <- LD.df |> 
     mutate(species = recode(species, "Roundworm"       = "Nematodes", 
                                      "Mosquito_Larvae" = "Mosquito Larvae", 
@@ -3253,7 +3387,7 @@
       title = "Species Population Density Over Time",
       fill  = "Species")
   
-  ##FIGURE 2: Depth axis ------------------------------------------------------- 
+  ###FIGURE 1b: Depth axis ------------------------------------------------------- 
   
   Depth.ridges <- figs.df |> 
     ggplot(aes(Depth_cm, species, fill = species)) +
@@ -3282,7 +3416,7 @@
       title = "Species Population Density by Pool Depth",
       fill  = "Species")  
   
-  ##FIGURE 3: Recruitment Axis ------------------------------------------------- 
+  ###FIGURE 1c: Recruitment Axis ------------------------------------------------- 
   
   Rec.ridges <- figs.df |> 
     ggplot(aes(Recruitment_Amount, species, fill = species)) +
@@ -3311,14 +3445,11 @@
       title = "Species Population Density By Recruitment Amount",
       fill  = "Species") 
   
-  ##FIGURE 4: MAR-SEP OVERALL NICHE OVERLAP ------------------------------------
+  ##11.2: BOXPLOTS -------------------------------------------------------------
    MS.boxplot <- ggplot(MS_Comp.boot.df, aes(x    = year, 
                                                        y    = NO, 
                                                        fill = year)) +
     geom_boxplot() +
-    labs(title = "Niche Overlap by Year, March - September ONLY (Boostrapped)",
-         x     = "Year",
-         y     = "Niche Overlap Proportion") + 
     theme_minimal() + 
     theme(legend.position = "none") + 
     scale_fill_manual(values = c('#56b3e9', '#7e2954')) +  
@@ -3327,18 +3458,20 @@
       "Year 1" = "2023"
     )) +
     labs( 
-      x     = "Year (March - September Only)", 
+      x     = "Year (March-September)", 
       y     = "Proportion of Niche Overlap",
-      title = "Overall Niche Overlaps, 2022 vs 2023",
+      title = "Comparison of Overall Niche Overlap",
       fill  = "Species") + 
     theme(
       axis.text.x = element_text(size = 12, color = "grey20"),
       axis.title.x = element_text(size = 14), 
       axis.title.y = element_text(size = 14), 
+      panel.grid.major.x = element_blank(),
       title = element_text(size = 13)
     )
   
-  ##FIGURE 5: Julian Day Data Mar-Sep ------------------------------------------
+  ##11.3: POINT GRAPHS ---------------------------------------------------------
+  ###FIGURE 3a: Julian Day -----------------------------------------------------
   JulMS.point <- ggplot(JulMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
     geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
     geom_errorbar( 
@@ -3355,7 +3488,7 @@
     labs(
       x      = "Year (March - September Only)",
       y      = "Niche Overlap Proportion (LS Mean)",
-      title  = "Temporal Niche Overlap, 2022 vs 2023"
+      title  = "Comparison of Temporal Niche Overlap"
     ) +
     theme_minimal(base_size = 12) + 
     theme(
@@ -3364,13 +3497,77 @@
       axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
       panel.grid.major.x = element_blank(),
       axis.text.x = element_text(size = 12, color = "grey20"),
-      axis.title.x = element_text(size = 14), 
-      axis.title.y = element_text(size = 14), 
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
       title = element_text(size = 12), 
       legend.position = "none"
     )
   JulMS.point
   
+  ###FIGURE 3b: Overall --------------------------------------------------------
+  AllMS.point <- ggplot(MS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year (March - September Only)",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Comparison of Overall Niche Overlap"
+    ) +
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
+      title = element_text(size = 12), 
+      legend.position = "none"
+    )
+  
+  ###FIGURE 3c: Depth ---------------------------------------------------------- 
+  DepMS.point <- ggplot(DepMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year (March - September Only)",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Comparison of Niche Overlap for Depth"
+    ) +
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
+      title = element_text(size = 12), 
+      legend.position = "none"
+    )
+  DepMS.point
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
