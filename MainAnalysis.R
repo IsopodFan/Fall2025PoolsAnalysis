@@ -25,7 +25,8 @@
     install.packages("lmerTest") 
     install.packages("emmeans") 
     install.packages("pbkrtest")
-  
+    install.packages("viridis") 
+   
   #call packages
     library(tidyverse)
     library(vegan)
@@ -44,7 +45,8 @@
     library(lme4)
     library(lmerTest) 
     library(emmeans) 
-    library(pbkrtest)
+    library(pbkrtest) 
+    library(viridis)
   
   #import and prep data 
   #ensure wd is correct
@@ -774,33 +776,34 @@
       overall.cluster.pvalues         = p.all.clus,
       overall.differentiated.pvalues  = p.all.diff)
 
-#SECTION 4: (YEARS SEPARATE) GEANGE ANALYSIS EXCLUDING TEMP AND O2--------------
+#SECTION 4: (YEARS SEPARATE) GEANGE ANALYSIS INCLUDING TEMP AND O2--------------
   #this section does identical analysis to section 2 but separates data by year
   
 ##4.1: DATA PREP AND GEANGE SETUP ----------------------------------------------
     
     # read in the individual data file
-    LD.df <- select(LongDataPools, id, Species, Julian_Day, Pool_Number, 
-                    Recruitment_Amount, Depth_cm) 
+    LD6.df <- select(LongDataPools, id, Species, Julian_Day, Pool_Number, 
+                    Recruitment_Amount, Depth_cm, Temp_Reg, O2_Reg) 
     
+    LD6.df <- LD6.df[complete.cases(LD6.df), ]
     
     # Ensure the first two column names are "id" and "species".
-    colnames(LD.df)[1] <- "id"
-    colnames(LD.df)[2] <- "species"
+    colnames(LD6.df)[1] <- "id"
+    colnames(LD6.df)[2] <- "species"
     
     # Ensure that the first 2 cols are factors.
-    LD.df$id      <- as.factor(LD.df$id)
-    LD.df$species <- as.factor(LD.df$species)
+    LD6.df$id      <- as.factor(LD6.df$id)
+    LD6.df$species <- as.factor(LD6.df$species)
     
     # Store some vectors of names:
-    spnames   <- sort(unique(as.character(LD.df$species)))
+    spnames   <- sort(unique(as.character(LD6.df$species)))
     no.spp    <- length(spnames)
     
-    varnames <- colnames(LD.df)[-(1:2)]    
+    varnames <- colnames(LD6.df)[-(1:2)]    
     no.vars  <- length(varnames)  
     
     #make a vector of variable types 
-    vartypes <- c("cts", "cat", "cts", "cts") 
+    vartypes <- c("cts", "cat", "cts", "cts", "cts", "cts") 
     #check they are correctly labeled: 
     cbind(varnames,vartypes)
     
@@ -812,8 +815,8 @@
     avail.list
     
     #separate LD.df into 2 files, one for year 0 and one for year 1
-      LD0.df <- LD.df[LD.df$Julian_Day <= 365, ] 
-      LD1.df <- LD.df[LD.df$Julian_Day > 365, ]
+    MS0.df <- LD6.df[LD.df$Julian_Day >= 60 & LD6.df$Julian_Day <= 273, ] 
+    MS1.df <- LD6.df[LD.df$Julian_Day >= 425 & LD.df$Julian_Day <= 638, ] 
     
       
 ##4.2: YEAR 0 GEANGE ANALYSIS --------------------------------------------------  
@@ -848,7 +851,7 @@
     for (vv in 1:no.vars)
     {
       #slight change to the Geange code here: 
-      y <- LD0.df[[varnames[vv]]]
+      y <- MS0.df[[varnames[vv]]]
       #this ensures that y is a vector, and not a 1 column tibble 
       #the latter happened with my data and not the example dataset 
       #no idea why but this seems to work 
@@ -858,20 +861,20 @@
       print(str(y))
       print(paste("vartype =", vartypes[vv])) 
       if (vartypes[vv] == "bin")
-        no.array[,,vv] <- no.bin.fn(LD0.df$species,y)
+        no.array[,,vv] <- no.bin.fn(MS0.df$species,y)
       if (vartypes[vv] == "cat")
-        no.array[,,vv] <- no.cat.fn(LD0.df$species,y)
+        no.array[,,vv] <- no.cat.fn(MS0.df$species,y)
       if (vartypes[vv] == "count")
-        no.array[,,vv] <- no.count.fn(LD0.df$species,y)
+        no.array[,,vv] <- no.count.fn(MS0.df$species,y)
       if (vartypes[vv] == "cts")
-        no.array[,,vv] <- no.cts.fn(LD0.df$species,y)
+        no.array[,,vv] <- no.cts.fn(MS0.df$species,y)
       if (vartypes[vv] == "meas")
-        no.array[,,vv] <- no.cts.fn(LD0.df$species,log(y))
+        no.array[,,vv] <- no.cts.fn(MS0.df$species,log(y))
       if (vartypes[vv] == "pcent")
-        no.array[,,vv] <- no.cts.fn(LD0.df$species,
+        no.array[,,vv] <- no.cts.fn(MS0.df$species,
                                     log(y/(100 - y)))
       if (vartypes[vv] == "propn")
-        no.array[,,vv] <- no.cts.fn(LD0.df$species,
+        no.array[,,vv] <- no.cts.fn(MS0.df$species,
                                     log(y/(1 - y)))
       if (vartypes[vv] == "rsel")
       {
@@ -880,7 +883,7 @@
         no.choices       <- length(avail.list[[vv]])
         choicenames      <- names(avail.list[[vv]])
         avail.vect       <- avail.list[[vv]]
-        alpha.mat        <- alpha.fn(LD0.df$species,y,avail.vect)
+        alpha.mat        <- alpha.fn(MS0.df$species,y,avail.vect)
         alpha.list[[vv]] <- alpha.mat         
         
         # Do niche overlaps, as proportions in categories:
@@ -917,7 +920,7 @@
     
     # Set a temporary data frame, which will change each time
     # through the cycle by having its species column permuted.
-    temp.df <- LD0.df
+    temp.df <- MS0.df
     
     
     # For each replication, permute the species labels, run the
@@ -1009,7 +1012,7 @@
     
     #reformat observed data to derive matrix of niche overlaps with one row per 
     #species, and one column for each niche dimension 
-    VV <- ncol(LD0.df[,-c(1:2)])
+    VV <- ncol(MS0.df[,-c(1:2)])
     RR <- replic   # Number of replications.
     
     #making a slight adjustment to Geange code because it doesn't work with the  
@@ -1086,7 +1089,7 @@
     p.all.clus <- mean(overall.data.ch < overall.pseudo.ch)
     
     ###save results ------------------------------------------------------------
-    NO_0.results <- list(
+    MS0_6axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
       NOestimates                     = no.array,
@@ -1131,7 +1134,7 @@
     for (vv in 1:no.vars)
     {
       #slight change to the Geange code here: 
-      y <- LD1.df[[varnames[vv]]]
+      y <- MS1.df[[varnames[vv]]]
       #this ensures that y is a vector, and not a 1 column tibble 
       #the latter happened with my data and not the example dataset 
       #no idea why but this seems to work 
@@ -1141,20 +1144,20 @@
       print(str(y))
       print(paste("vartype =", vartypes[vv])) 
       if (vartypes[vv] == "bin")
-        no.array[,,vv] <- no.bin.fn(LD1.df$species,y)
+        no.array[,,vv] <- no.bin.fn(MS1.df$species,y)
       if (vartypes[vv] == "cat")
-        no.array[,,vv] <- no.cat.fn(LD1.df$species,y)
+        no.array[,,vv] <- no.cat.fn(MS1.df$species,y)
       if (vartypes[vv] == "count")
-        no.array[,,vv] <- no.count.fn(LD1.df$species,y)
+        no.array[,,vv] <- no.count.fn(MS1.df$species,y)
       if (vartypes[vv] == "cts")
-        no.array[,,vv] <- no.cts.fn(LD1.df$species,y)
+        no.array[,,vv] <- no.cts.fn(MS1.df$species,y)
       if (vartypes[vv] == "meas")
-        no.array[,,vv] <- no.cts.fn(LD1.df$species,log(y))
+        no.array[,,vv] <- no.cts.fn(MS1.df$species,log(y))
       if (vartypes[vv] == "pcent")
-        no.array[,,vv] <- no.cts.fn(LD1.df$species,
+        no.array[,,vv] <- no.cts.fn(MS1.df$species,
                                     log(y/(100 - y)))
       if (vartypes[vv] == "propn")
-        no.array[,,vv] <- no.cts.fn(LD1.df$species,
+        no.array[,,vv] <- no.cts.fn(MS1.df$species,
                                     log(y/(1 - y)))
       if (vartypes[vv] == "rsel")
       {
@@ -1163,7 +1166,7 @@
         no.choices       <- length(avail.list[[vv]])
         choicenames      <- names(avail.list[[vv]])
         avail.vect       <- avail.list[[vv]]
-        alpha.mat        <- alpha.fn(LD1.df$species,y,avail.vect)
+        alpha.mat        <- alpha.fn(MS1.df$species,y,avail.vect)
         alpha.list[[vv]] <- alpha.mat         
         
         # Do niche overlaps, as proportions in categories:
@@ -1177,7 +1180,7 @@
     
     ### Permutation Testing ------------------------------------------------
     
-    # Permutation of the species labels would give data 
+    # Permutation of the species labels wouMS give data 
     # satisfying the null model of complete niche overlap, 
     # i.e. that none of the variables 
     # serves to differentiate species into different niches.
@@ -1200,7 +1203,7 @@
     
     # Set a temporary data frame, which will change each time
     # through the cycle by having its species column permuted.
-    temp.df <- LD1.df
+    temp.df <- MS1.df
     
     
     # For each replication, permute the species labels, run the
@@ -1292,7 +1295,7 @@
     
     #reformat observed data to derive matrix of niche overlaps with one row per 
     #species, and one column for each niche dimension 
-    VV <- ncol(LD1.df[,-c(1:2)])
+    VV <- ncol(MS1.df[,-c(1:2)])
     RR <- replic   # Number of replications.
     
     #making a slight adjustment to Geange code because it doesn't work with the  
@@ -1369,7 +1372,7 @@
     p.all.clus <- mean(overall.data.ch < overall.pseudo.ch)
     
     ###save results ------------------------------------------------------------
-    NO_1.results <- list(
+    MS1_6axes.results <- list(
       info = list(variables = cbind(varnames,vartypes),
                   perm.reps = replic),
       NOestimates                     = no.array,
@@ -3279,29 +3282,29 @@
   
   ###boxplot  ------------------------------------------------------------------
   #use grabtri() to get just the upper triangle for both years
-  DepMS0.tri <- grabtri(4, MS0.results)
-  DepMS1.tri <- grabtri(4, MS1.results)
-  DepMS0.tri <- DepMS0.tri[!is.na(DepMS0.tri)]
+  RecMS0.tri <- grabtri(3, MS0.results)
+  RecMS1.tri <- grabtri(3, MS1.results)
+  RecMS0.tri <- RecMS0.tri[!is.na(RecMS0.tri)]
   
   #make into a dataframe we can use for boxplot purposes
   
-  DepMS.df <- data.frame(
+  RecMS.df <- data.frame(
     
-    NO     = c(DepMS0.tri, DepMS1.tri), 
-    year   = factor(c(rep("Year 0", length(DepMS0.tri)), 
-                      rep("Year 1", length(DepMS1.tri))))
+    NO     = c(RecMS0.tri, RecMS1.tri), 
+    year   = factor(c(rep("Year 0", length(RecMS0.tri)), 
+                      rep("Year 1", length(RecMS1.tri))))
     
   )
   
   #make said boxplot
-  DepMS.boxplot <- ggplot(DepMS.df, aes(x = year, y = NO, fill = year)) +
+  RecMS.boxplot <- ggplot(RecMS.df, aes(x = year, y = NO, fill = year)) +
     geom_boxplot() + 
-    labs(title = "Niche Overlap Year 0 vs Year 1, Depth (Mar - Sep)", 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Recruitment Amount (Mar - Sep)", 
          x     = "Year", 
          y     = "Niche Overlap") + 
     theme_minimal()
   
-  t.test(DepMS0.tri, DepMS1.tri) #not significant 
+  t.test(RecMS0.tri, RecMS1.tri) #not significant 
   
   ###bootstrap -------------------------------------------------------------------
   set.seed(789)
@@ -3309,47 +3312,252 @@
   
   for (i in 1:n_boot) { 
     
-    DepMS0.tri.boot <- sample(DepMS0.tri, replace = TRUE) 
-    DepMS1.tri.boot <- sample(DepMS1.tri, replace = TRUE)
+    RecMS0.tri.boot <- sample(RecMS0.tri, replace = TRUE) 
+    RecMS1.tri.boot <- sample(RecMS1.tri, replace = TRUE)
     
   }
   
   #make into boxplotable dataframe
-  DepMS.boot.df <- data.frame(
-    NO     = c(DepMS0.tri.boot, DepMS1.tri.boot), 
-    year   = factor(c(rep("Year 0", length(DepMS0.tri.boot)), 
-                      rep("Year 1", length(DepMS1.tri.boot))))
+  RecMS.boot.df <- data.frame(
+    NO     = c(RecMS0.tri.boot, RecMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(RecMS0.tri.boot)), 
+                      rep("Year 1", length(RecMS1.tri.boot))))
     
   )
   
   #boxplot it
-  DepMS.boot.boxplot <- ggplot(DepMS.boot.df, aes(x    = year,  
+  RecMS.boot.boxplot <- ggplot(RecMS.boot.df, aes(x    = year,  
                                                   y    = NO,  
                                                   fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), 
+                  Recruitment Amount(Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(RecMS0.tri.boot, RecMS1.tri.boot) # SIGNIFICANT???
+  
+  ###lin model -----------------------------------------------------------------
+  
+  RecMS.linmodel   <- lm(NO ~ year, data = RecMS.boot.df)
+  anova(RecMS.linmodel) #not significant
+  
+  RecMS.emmeans    <- emmeans(RecMS.linmodel, ~ year)
+  RecMS.emmeans.df <- as.data.frame(RecMS.emmeans)
+
+  ##10.3: Pool Number ----------------------------------------------------------
+  
+  ###boxplot  ------------------------------------------------------------------
+  #use grabtri() to get just the upper triangle for both years
+  PoolMS0.tri <- grabtri(2, MS0_6axes.results)
+  PoolMS1.tri <- grabtri(2, MS1_6axes.results)
+  PoolMS0.tri <- PoolMS0.tri[!is.na(PoolMS0.tri)]
+  
+  #make into a dataframe we can use for boxplot purposes
+  
+  PoolMS.df <- data.frame(
+    
+    NO     = c(PoolMS0.tri, PoolMS1.tri), 
+    year   = factor(c(rep("Year 0", length(PoolMS0.tri)), 
+                      rep("Year 1", length(PoolMS1.tri))))
+    
+  )
+  
+  #make said boxplot
+  PoolMS.boxplot <- ggplot(PoolMS.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Depth (Mar - Sep)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(PoolMS0.tri, PoolMS1.tri) #not significant 
+  
+  ###bootstrap -------------------------------------------------------------------
+  set.seed(789)
+  n_boot = 36
+  
+  for (i in 1:n_boot) { 
+    
+    PoolMS0.tri.boot <- sample(PoolMS0.tri, replace = TRUE) 
+    PoolMS1.tri.boot <- sample(PoolMS1.tri, replace = TRUE)
+    
+  }
+  
+  #make into boxplotable dataframe
+  PoolMS.boot.df <- data.frame(
+    NO     = c(PoolMS0.tri.boot, PoolMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(PoolMS0.tri.boot)), 
+                      rep("Year 1", length(PoolMS1.tri.boot))))
+    
+  )
+  
+  #boxplot it
+  PoolMS.boot.boxplot <- ggplot(PoolMS.boot.df, aes(x    = year,  
+                                                    y    = NO,  
+                                                    fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Pool (Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(PoolMS0.tri.boot, PoolMS1.tri.boot) #**
+  #probably significant just because the number of available pools decreases?
+  
+  ###lin model -----------------------------------------------------------------
+  
+  PoolMS.linmodel   <- lm(NO ~ year, data = PoolMS.boot.df)
+  anova(PoolMS.linmodel) #not significant
+  
+  PoolMS.emmeans    <- emmeans(PoolMS.linmodel, ~ year)
+  PoolMS.emmeans.df <- as.data.frame(PoolMS.emmeans)  
+  
+  ##10.4: Temp ----------------------------------------------------------------
+  
+  ###boxplot  ------------------------------------------------------------------
+  #use grabtri() to get just the upper triangle for both years
+  TempMS0.tri <- grabtri(5, MS0_6axes.results)
+  TempMS1.tri <- grabtri(5, MS1_6axes.results)
+  TempMS0.tri <- TempMS0.tri[!is.na(TempMS0.tri)]
+  
+  #make into a dataframe we can use for boxplot purposes
+  
+  TempMS.df <- data.frame(
+    
+    NO     = c(TempMS0.tri, TempMS1.tri), 
+    year   = factor(c(rep("Year 0", length(TempMS0.tri)), 
+                      rep("Year 1", length(TempMS1.tri))))
+    
+  )
+  
+  #make said boxplot
+  TempMS.boxplot <- ggplot(TempMS.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, Depth (Mar - Sep)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(TempMS0.tri, TempMS1.tri) #not significant 
+  
+  ###bootstrap -------------------------------------------------------------------
+  set.seed(789)
+  n_boot = 36
+  
+  for (i in 1:n_boot) { 
+    
+    TempMS0.tri.boot <- sample(TempMS0.tri, replace = TRUE) 
+    TempMS1.tri.boot <- sample(TempMS1.tri, replace = TRUE)
+    
+  }
+  
+  #make into boxplotable dataframe
+  TempMS.boot.df <- data.frame(
+    NO     = c(TempMS0.tri.boot, TempMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(TempMS0.tri.boot)), 
+                      rep("Year 1", length(TempMS1.tri.boot))))
+    
+  )
+  
+  #boxplot it
+  TempMS.boot.boxplot <- ggplot(TempMS.boot.df, aes(x    = year,  
+                                                  y    = NO,  
+                                                  fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Temp (Bootstrapped)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(TempMS0.tri.boot, TempMS1.tri.boot) #**
+  
+  ###lin model -----------------------------------------------------------------
+  
+  TempMS.linmodel   <- lm(NO ~ year, data = TempMS.boot.df)
+  anova(TempMS.linmodel) #not significant
+  
+  TempMS.emmeans    <- emmeans(TempMS.linmodel, ~ year)
+  TempMS.emmeans.df <- as.data.frame(TempMS.emmeans)
+  
+  
+  ##10.5: O2 -------------------------------------------------------------------
+  
+  ###boxplot  ------------------------------------------------------------------
+  #use grabtri() to get just the upper triangle for both years
+  OxyMS0.tri <- grabtri(6, MS0_6axes.results)
+  OxyMS1.tri <- grabtri(6, MS1_6axes.results)
+  OxyMS0.tri <- OxyMS0.tri[!is.na(OxyMS0.tri)]
+  
+  #make into a dataframe we can use for boxplot purposes
+  
+  OxyMS.df <- data.frame(
+    
+    NO     = c(OxyMS0.tri, OxyMS1.tri), 
+    year   = factor(c(rep("Year 0", length(OxyMS0.tri)), 
+                      rep("Year 1", length(OxyMS1.tri))))
+    
+  )
+  
+  #make said boxplot
+  OxyMS.boxplot <- ggplot(OxyMS.df, aes(x = year, y = NO, fill = year)) +
+    geom_boxplot() + 
+    labs(title = "Niche Overlap Year 0 vs Year 1, O2 (Mar - Sep)", 
+         x     = "Year", 
+         y     = "Niche Overlap") + 
+    theme_minimal()
+  
+  t.test(OxyMS0.tri, OxyMS1.tri) #not significant 
+  
+  ###bootstrap -------------------------------------------------------------------
+  set.seed(789)
+  n_boot = 36
+  
+  for (i in 1:n_boot) { 
+    
+    OxyMS0.tri.boot <- sample(OxyMS0.tri, replace = TRUE) 
+    OxyMS1.tri.boot <- sample(OxyMS1.tri, replace = TRUE)
+    
+  }
+  
+  #make into boxplotable dataframe
+  OxyMS.boot.df <- data.frame(
+    NO     = c(OxyMS0.tri.boot, OxyMS1.tri.boot), 
+    year   = factor(c(rep("Year 0", length(OxyMS0.tri.boot)), 
+                      rep("Year 1", length(OxyMS1.tri.boot))))
+    
+  )
+  
+  #boxplot it
+  OxyMS.boot.boxplot <- ggplot(OxyMS.boot.df, aes(x    = year,  
+                                                    y    = NO,  
+                                                    fill = year)) +
     geom_boxplot() + 
     labs(title = "Niche Overlap Year 0 vs Year 1 (Mar-Sep), Depth (Bootstrapped)", 
          x     = "Year", 
          y     = "Niche Overlap") + 
     theme_minimal()
   
-  t.test(DepMS0.tri.boot, DepMS1.tri.boot) # SIGNIFICANT???
+  t.test(OxyMS0.tri.boot, OxyMS1.tri.boot) 
   
   ###lin model -----------------------------------------------------------------
   
-  DepMS.linmodel   <- lm(NO ~ year, data = DepMS.boot.df)
-  anova(DepMS.linmodel) #not significant
+  OxyMS.linmodel   <- lm(NO ~ year, data = OxyMS.boot.df)
+  anova(OxyMS.linmodel) #not significant
   
-  DepMS.emmeans    <- emmeans(DepMS.linmodel, ~ year)
-  DepMS.emmeans.df <- as.data.frame(DepMS.emmeans)
+  OxyMS.emmeans    <- emmeans(OxyMS.linmodel, ~ year)
+  OxyMS.emmeans.df <- as.data.frame(OxyMS.emmeans)
   
-#SECTION 11: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
+  
+  #SECTION 11: GRAPHS FOR POSTER/PAPER ------------------------------------------- 
   
   install.packages("viridis") 
   library(viridis)
   
   ##11.1: RIDGES GRAPHS --------------------------------------------------------
   ###FIGURE 1a: Julian Day -----------------------------------------------------
-  figs.df <- LD.df |> 
+  figs.df <- LD6.df |> 
     mutate(species = recode(species, "Roundworm"       = "Nematodes", 
                                      "Mosquito_Larvae" = "Mosquito Larvae", 
                                      "Ostracod"        = "Ostracods", 
@@ -3426,7 +3634,7 @@
                                  '#f0e442', '#e69f00', '#d55c00', 
                                  '#cc79a7', '#7e2954', '#1b1557')) +
     scale_x_continuous(limits = c(0, 600), 
-                       breaks = seq(0, 600, by = 50), 
+                       breaks = seq(0, 600, by = 100), 
                        expand = c(0, 0)) +
     theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
     theme(text               = element_text(size = 10),
@@ -3440,10 +3648,70 @@
           panel.grid.major.x = element_blank(),
           legend.position    = "none") +
     labs( 
-      x     = "Recruitment Amount (Number of Individuals Per Sample)", 
+      x     = "Recruitment Amount \n (Number of Individuals Per Sample)", 
       y     = NULL,
       title = "Species Population Density By Recruitment Amount",
       fill  = "Species") 
+  
+  ###FIGURE 1d: Temperature Axis ------------------------------------------------- 
+  
+  Temp.ridges <- figs.df |> 
+    ggplot(aes(Temp_Reg, species, fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    scale_fill_manual(values = c('#009e74', '#0071b2', '#56b3e9', 
+                                 '#f0e442', '#e69f00', '#d55c00', 
+                                 '#cc79a7', '#7e2954', '#1b1557')) +
+    scale_x_continuous(limits = c(0, 35),
+                       breaks = seq(0, 35, by = 5),
+                       expand = c(0, 0)) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text               = element_text(size = 10),
+          axis.text.y        = element_text(size = 10), 
+          axis.text.x        = element_text(size = 10),
+          axis.title.x       = element_text(size = 12),
+          axis.line.y        = element_line(linetype  = "solid", 
+                                            color     = "black", 
+                                            linewidth = 0.5),
+          axis.line.x        = element_line(linetype  = "solid"), 
+          panel.grid.major.x = element_blank(),
+          legend.position    = "none") +
+    labs( 
+      x     = "Temperature (C)", 
+      y     = NULL,
+      title = "Species Population Density By Temperature",
+      fill  = "Species") 
+  Temp.ridges
+  
+  ###FIGURE 1e: Dissolved Oxygen Axis ------------------------------------------------- 
+  
+  O2.ridges <- figs.df |> 
+    ggplot(aes(O2_Reg, species, fill = species)) +
+    geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
+                        show.legend = FALSE, color = FALSE) +
+    scale_fill_manual(values = c('#009e74', '#0071b2', '#56b3e9', 
+                                 '#f0e442', '#e69f00', '#d55c00', 
+                                 '#cc79a7', '#7e2954', '#1b1557')) +
+    scale_x_continuous(limits = c(0, 55),
+                       breaks = seq(0, 55, by = 10),
+                       expand = c(0, 0)) +
+    theme_ridges(grid = TRUE, center_axis_labels = TRUE) +
+    theme(text               = element_text(size = 10),
+          axis.text.y        = element_text(size = 10), 
+          axis.text.x        = element_text(size = 10),
+          axis.title.x       = element_text(size = 12),
+          axis.line.y        = element_line(linetype  = "solid", 
+                                            color     = "black", 
+                                            linewidth = 0.5),
+          axis.line.x        = element_line(linetype  = "solid"), 
+          panel.grid.major.x = element_blank(),
+          legend.position    = "none") +
+    labs( 
+      x     = "Dissolved Oxygen (% Saturation)", 
+      y     = NULL,
+      title = "Species Population Density By Dissolved Oxygen",
+      fill  = "Species") 
+  O2.ridges
   
   ##11.2: BOXPLOTS -------------------------------------------------------------
    MS.boxplot <- ggplot(MS_Comp.boot.df, aes(x    = year, 
@@ -3485,10 +3753,14 @@
       limits = c("Year 0", "Year 1"),                     
       labels = c("2022", "2023")          
     ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +  
     labs(
-      x      = "Year (March - September Only)",
+      x      = "Year",
       y      = "Niche Overlap Proportion (LS Mean)",
-      title  = "Comparison of Temporal Niche Overlap"
+      title  = "Comparison of Temporal Niche \n Overlap Between Years"
     ) +
     theme_minimal(base_size = 12) + 
     theme(
@@ -3500,7 +3772,8 @@
       axis.title.x = element_text(size = 12), 
       axis.title.y = element_text(size = 12), 
       title = element_text(size = 12), 
-      legend.position = "none"
+      legend.position = "none", 
+      plot.title = element_text(hjust = 0.5)
     )
   JulMS.point
   
@@ -3518,10 +3791,14 @@
       limits = c("Year 0", "Year 1"),                     
       labels = c("2022", "2023")          
     ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +  
     labs(
-      x      = "Year (March - September Only)",
+      x      = "Year",
       y      = "Niche Overlap Proportion (LS Mean)",
-      title  = "Comparison of Overall Niche Overlap"
+      title  = "Comparison of Overall Niche \n Overlap Between Years"
     ) +
     theme_minimal(base_size = 12) + 
     theme(
@@ -3533,8 +3810,10 @@
       axis.title.x = element_text(size = 12), 
       axis.title.y = element_text(size = 12), 
       title = element_text(size = 12), 
-      legend.position = "none"
+      legend.position = "none", 
+      plot.title = element_text(hjust = 0.5)
     )
+  AllMS.point
   
   ###FIGURE 3c: Depth ---------------------------------------------------------- 
   DepMS.point <- ggplot(DepMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
@@ -3555,6 +3834,10 @@
       y      = "Niche Overlap Proportion (LS Mean)",
       title  = "Comparison of Niche Overlap for Depth"
     ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +  
     theme_minimal(base_size = 12) + 
     theme(
       axis.line   = element_line(color = "gray35"),               
@@ -3568,6 +3851,221 @@
       legend.position = "none"
     )
   DepMS.point
+  
+  ###FIGURE 3d: Recruitment Amount ----------------------------------------------
+  RecMS.point <- ggplot(RecMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year \n (March - September Only)",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Comparison of Niche Overlap \n for Recruitment Amount"
+    ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +  
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
+      title = element_text(size = 12), 
+      legend.position = "none"
+    )
+  RecMS.point
+  
+  ###FIGURE 3e: Temperature  ----------------------------------------------------
+  TempMS.point <- ggplot(TempMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Comparison of Temperature Niche \n Overlap Between Years"
+    ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) + 
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
+      title = element_text(size = 12), 
+      legend.position = "none", 
+      plot.title = element_text(hjust = 0.5)
+    )
+  TempMS.point
+  
+  ###FIGURE 3f: Dissolved Oxygen ------------------------------------------------
+  OxyMS.point <- ggplot(OxyMS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+    geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
+    geom_errorbar( 
+      aes(ymin  = lower.CL, ymax  = upper.CL), 
+      width  = 0.2, 
+      color  = "grey10"
+    ) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    scale_x_discrete(
+      limits = c("Year 0", "Year 1"),                     
+      labels = c("2022", "2023")          
+    ) +
+    labs(
+      x      = "Year \n (March - September Only)",
+      y      = "Niche Overlap Proportion (LS Mean)",
+      title  = "Comparison of Niche Overlap \n for Dissolved Oxygen"
+    ) +
+    scale_y_continuous(
+      limits = c(0.25, 0.60), 
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) + 
+    theme_minimal(base_size = 12) + 
+    theme(
+      axis.line   = element_line(color = "gray35"),               
+      axis.line.x = element_line(color = "gray35", linewidth = 0.5),  
+      axis.line.y = element_line(color = "gray35", linewidth = 0.5), 
+      panel.grid.major.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "grey20"),
+      axis.title.x = element_text(size = 12), 
+      axis.title.y = element_text(size = 12), 
+      title = element_text(size = 12), 
+      legend.position = "none"
+    )
+  OxyMS.point
+  
+  geom_line(data = JulMS.emmeans.df, aes(x = year, y = emmean, group = 1, color = "July"), linetype = "dashed") +
+    geom_errorbar(data = JulMS.emmeans.df, aes(x = year, ymin = lower.CL, ymax = upper.CL, color = "July"), width = 0.2) +
+    geom_point(data = JulMS.emmeans.df, aes(x = year, y = emmean, color = "July"), size = 3) +
+  
+
+  ###FIGURE 3g: ALL NON-SIG'S AT ONCE -------------------------------------------
+  NonSigMS.point <- ggplot() +
+    
+    # Depth 
+    geom_line(data = DepMS.emmeans.df, 
+              aes(x     = as.numeric(factor(year)) - 0.05, 
+                  y     = emmean, group = 1, 
+                  color = "Depth"),
+              linetype  = "dashed") +
+    geom_errorbar(data = DepMS.emmeans.df, 
+                  aes(x     = as.numeric(factor(year)) - 0.05,
+                      ymin  = lower.CL, 
+                      ymax  = upper.CL, 
+                      color = "Depth"),
+                  width     = 0.05) +
+    geom_point(data = DepMS.emmeans.df, 
+               aes(x        = as.numeric(factor(year)) - 0.05, 
+                   y        = emmean, 
+                   color    = "Depth"),
+               size         = 4) +
+    
+    # Recruitment (shift slightly right)
+    geom_line(data = RecMS.emmeans.df, 
+              aes(x     = as.numeric(factor(year)) + 0.05, 
+                  y     = emmean, group = 1, 
+                  color = "Recruitment"),
+              linetype  = "dashed") +
+    geom_errorbar(data = RecMS.emmeans.df, 
+                  aes(x     = as.numeric(factor(year)) + 0.05, 
+                      ymin  = lower.CL, ymax = upper.CL, 
+                      color = "Recruitment"),
+                  width     = 0.05) +
+    geom_point(data = RecMS.emmeans.df, 
+               aes(x     = as.numeric(factor(year)) + 0.05,
+                   y     = emmean, 
+                   color = "Recruitment"),
+               size      = 4) +
+    
+    # Dissolved Oxygen
+    geom_line(data = OxyMS.emmeans.df, 
+              aes(x     = as.numeric(factor(year)) + 0.15,
+                  y     = emmean, group = 1, 
+                  color = "Dissolved Oxygen"),
+              linetype  = "dashed") +
+    geom_errorbar(data = OxyMS.emmeans.df, 
+                  aes(x     = as.numeric(factor(year)) + 0.15,
+                      ymin  = lower.CL, ymax = upper.CL, 
+                      color = "Dissolved Oxygen"),
+                  width     = 0.05) +
+    geom_point(data = OxyMS.emmeans.df, 
+               aes(x     = as.numeric(factor(year)) + 0.15, 
+                   y     = emmean, 
+                   color = "Dissolved Oxygen"),
+               size      = 4) +
+    
+    scale_color_manual(
+      name   = "Niche Axis:",
+      values = c(
+        "Depth"            = '#0071b2', 
+        "Recruitment"      = '#009e74', 
+        "Dissolved Oxygen" = '#d55c00')
+    ) +
+    
+    scale_x_continuous(
+      breaks = c(1, 2),
+      labels = c("2022", "2023"),
+      name   = "Year"
+    ) +
+    
+    scale_y_continuous(
+      limits = c(0.25, 0.60),
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +
+    
+    labs(
+      y     = "Niche Overlap Proportion (LS Mean)",
+      title = "Niche Overlap By Year for Recruitment, \n Depth, and Dissolved Oxygen"
+    ) +
+    
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.line          = element_line(color = "gray35"),
+      axis.line.x        = element_line(color = "gray35", linewidth = 0.5),
+      axis.line.y        = element_line(color = "gray35", linewidth = 0.5),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.text.x        = element_text(size = 12, color = "grey20"),
+      axis.title.x       = element_text(size = 12),
+      axis.title.y       = element_text(size = 12),
+      title              = element_text(size = 12),
+      #legend.position    = "none",
+      plot.title         = element_text(hjust = 0.5),
+      legend.position    = "top",
+      legend.title       = element_text(size = 12),
+      legend.text        = element_text(size = 11)
+    )
+  NonSigMS.point
   
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
   View(NO_1.results)
