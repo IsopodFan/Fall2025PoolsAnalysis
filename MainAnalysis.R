@@ -1391,8 +1391,8 @@
  
   ##5.1: OVERALL COMPARISON ---------------------------------------------------- 
   #extract the upper triangle of each ests.overall matrix for year 0 and 1
-  NO_0 <- NO_0.results$ests.overall[upper.tri(NO_0.results$ests.overall)] 
-  NO_1 <- NO_1.results$ests.overall[upper.tri(NO_1.results$ests.overall)]
+  NO_0 <- MS0_6axes.results$ests.overall[upper.tri(MS0_6axes.results$ests.overall)] 
+  NO_1 <- MS1_6axes.results$ests.overall[upper.tri(MS1_6axes.results$ests.overall)]
   
   #combine the two into one dataframe that can be used for the ggplot boxplots
   NO_Long.df <- data.frame(
@@ -1451,15 +1451,15 @@
   
   #Create vectors for the upper triangle of the matrix for each niche axis
   #and each year
-  NO_0.Jul   <- grabtri(1, NO_0.results)
-  NO_0.Pool  <- grabtri(2, NO_0.results)
-  NO_0.Rec   <- grabtri(3, NO_0.results)
-  NO_0.Depth <- grabtri(4, NO_0.results)
+  NO_0.Jul   <- grabtri(1, MS1_6axes.results)
+  NO_0.Pool  <- grabtri(2, MS1_6axes.results)
+  NO_0.Rec   <- grabtri(3, MS1_6axes.results)
+  NO_0.Depth <- grabtri(4, MS1_6axes.results)
   
-  NO_1.Jul   <- grabtri(1, NO_1.results)
-  NO_1.Pool  <- grabtri(2, NO_1.results)
-  NO_1.Rec   <- grabtri(3, NO_1.results)
-  NO_1.Depth <- grabtri(4, NO_1.results)
+  NO_1.Jul   <- grabtri(1, MS1_6axes.results)
+  NO_1.Pool  <- grabtri(2, MS1_6axes.results)
+  NO_1.Rec   <- grabtri(3, MS1_6axes.results)
+  NO_1.Depth <- grabtri(4, MS1_6axes.results)
   
   #combine all of that into one dataframe that can be used to make a boxplot
   NO_Long_Sep.df <- data.frame( 
@@ -1528,8 +1528,8 @@
   }
   
   #grab the julain day matrix for each year
-  Jul0 <- grabmat(1, NO_0.results)
-  Jul1 <- grabmat(1, NO_1.results)
+  Jul0 <- grabmat(1, MS0_6axes.results)
+  Jul1 <- grabmat(1, MS1_6axes.results)
   
   #make them a real matrix so we can use diag() function
   Jul0 <- as.matrix(Jul0)
@@ -1590,8 +1590,8 @@
   ### overall comparison, just Julian day --------------------------------------
   
   #use grabtri() to get just the upper triangle for both years
-  Jul0tri <- grabtri(1, NO_0.results)
-  Jul1tri <- grabtri(1, NO_1.results)
+  Jul0tri <- grabtri(1, MS0_6axes.results)
+  Jul1tri <- grabtri(1, MS1_6axes.results)
   
   #make into a dataframe we can use for boxplot purposes
   NO_Jul.df <- data.frame(
@@ -1642,7 +1642,7 @@
   #this section recreates the ggridges graph for each year separately
   
   #year 0
-  Jul0_Ridges <- LD0.df |> 
+  Jul0_Ridges <- MS0.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
     geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
                         show.legend = FALSE, color = FALSE) +
@@ -1658,7 +1658,7 @@
           axis.line.x = element_line(linetype = "solid"))  
   
   #year 1
-  Jul1_Ridges <- LD1.df |> 
+  Jul1_Ridges <- MS1.df |> 
     ggplot(aes(Julian_Day, reorder(species, desc(species)), fill = species)) +
     geom_density_ridges(rel_min_height = 0.01, alpha = .5, scale = 8, 
                         show.legend = FALSE, color = FALSE) +
@@ -1765,8 +1765,8 @@
   
   ##7.1: NICHE OVERLAP BETWEEN YEARS COMPARISON BY SPECIES ---------------------
   #covert overlap estimates to a matrix
-  NO0_ests <- as.matrix(NO_0.results[["ests.overall"]])
-  NO1_ests <- as.matrix(NO_1.results[["ests.overall"]])
+  NO0_ests <- as.matrix(MS0_6axes.results[["ests.overall"]])
+  NO1_ests <- as.matrix(MS1_6axes.results[["ests.overall"]])
   
   #set the diagonals to NA so we can remove them 
   diag(NO0_ests) <- NA 
@@ -2026,16 +2026,29 @@
    
   ##8.1: DATA PREP -------------------------------------------------------------   
   
+    # read in the individual data file
+    LD6.df <- select(LongDataPools, id, Species, Julian_Day, Pool_Number, 
+                     Recruitment_Amount, Depth_cm, Temp_Reg, O2_Reg) 
+    
+    LD6.df <- LD6.df[complete.cases(LD6.df), ]
+    
+    # Ensure the first two column names are "id" and "species".
+    colnames(LD6.df)[1] <- "id"
+    colnames(LD6.df)[2] <- "species"
+    
+    # Ensure that the first 2 cols are factors.
+    LD6.df$id      <- as.factor(LD6.df$id)
+    LD6.df$species <- as.factor(LD6.df$species)
     
     # Store some vectors of names:
-    spnames   <- sort(unique(as.character(LD.df$species)))
+    spnames   <- sort(unique(as.character(LD6.df$species)))
     no.spp    <- length(spnames)
     
-    varnames <- colnames(LD.df)[-(1:2)]    
+    varnames <- colnames(LD6.df)[-(1:2)]    
     no.vars  <- length(varnames)  
     
     #make a vector of variable types 
-    vartypes <- c("cts", "cat", "cts", "cts") 
+    vartypes <- c("cts", "cat", "cts", "cts", "cts", "cts") 
     #check they are correctly labeled: 
     cbind(varnames,vartypes)
     
@@ -2046,8 +2059,9 @@
     names(avail.list) <- varnames
     avail.list
     
-  MS0.df <- LD.df[LD.df$Julian_Day >= 60 & LD.df$Julian_Day <= 273, ] 
-  MS1.df <- LD.df[LD.df$Julian_Day >= 425 & LD.df$Julian_Day <= 638, ] 
+    #separate LD.df into 2 files, one for year 0 and one for year 1
+    MS0.df <- LD6.df[LD.df$Julian_Day >= 60 & LD6.df$Julian_Day <= 273, ] 
+    MS1.df <- LD6.df[LD.df$Julian_Day >= 425 & LD.df$Julian_Day <= 638, ] 
   
   
   
@@ -3162,7 +3176,7 @@
   
   ## 9.6: MARIANA GRAPHS ------------------------------------------------------
   
-  MS.emeans.point <- ggplot(MS.emeans.df, aes(x = year, y = emmean)) +
+  MS.emmeans.point <- ggplot(MS.emmeans.df, aes(x = year, y = emmean)) +
     geom_point(size = 4, color = "darkblue") +
     geom_errorbar( 
       aes(ymin  = lower.CL, ymax  = upper.CL), 
@@ -3341,7 +3355,7 @@
   ###lin model -----------------------------------------------------------------
   
   RecMS.linmodel   <- lm(NO ~ year, data = RecMS.boot.df)
-  anova(RecMS.linmodel) #not significant
+  anova(RecMS.linmodel)#not significant
   
   RecMS.emmeans    <- emmeans(RecMS.linmodel, ~ year)
   RecMS.emmeans.df <- as.data.frame(RecMS.emmeans)
@@ -3592,7 +3606,7 @@
     labs( 
       x     = "Days Since January 1st, 2022", 
       y     = NULL,
-      title = "Species Population Density Over Time",
+      title = "Taxa Population Density Over Time",
       fill  = "Species")
   
   ###FIGURE 1b: Depth axis ------------------------------------------------------- 
@@ -3778,7 +3792,7 @@
   JulMS.point
   
   ###FIGURE 3b: Overall --------------------------------------------------------
-  AllMS.point <- ggplot(MS.emmeans.df, aes(x = year, y = emmean, color = year)) +
+  AllMS.point <- ggplot(MS.emmeans.df, aes(x = year, y = emmean), color = "grey10") +
     geom_line(aes(group = 1), color = "gray30", linetype = "dashed") +
     geom_errorbar( 
       aes(ymin  = lower.CL, ymax  = upper.CL), 
@@ -3786,7 +3800,7 @@
       color  = "grey10"
     ) +
     geom_point(size = 4) +
-    scale_color_manual(values = c('#56b3e9', '#7e2954')) +
+    #scale_color_manual(values = c('#56b3e9', '#7e2954')) +
     scale_x_discrete(
       limits = c("Year 0", "Year 1"),                     
       labels = c("2022", "2023")          
@@ -4011,17 +4025,17 @@
     geom_line(data = OxyMS.emmeans.df, 
               aes(x     = as.numeric(factor(year)) + 0.15,
                   y     = emmean, group = 1, 
-                  color = "Dissolved Oxygen"),
+                  color = "Oxygen"),
               linetype  = "dashed") +
     geom_errorbar(data = OxyMS.emmeans.df, 
                   aes(x     = as.numeric(factor(year)) + 0.15,
                       ymin  = lower.CL, ymax = upper.CL, 
-                      color = "Dissolved Oxygen"),
+                      color = "Oxygen"),
                   width     = 0.05) +
     geom_point(data = OxyMS.emmeans.df, 
                aes(x     = as.numeric(factor(year)) + 0.15, 
                    y     = emmean, 
-                   color = "Dissolved Oxygen"),
+                   color = "Oxygen"),
                size      = 4) +
     
     scale_color_manual(
@@ -4029,7 +4043,7 @@
       values = c(
         "Depth"            = '#0071b2', 
         "Recruitment"      = '#009e74', 
-        "Dissolved Oxygen" = '#d55c00')
+        "Oxygen" = '#d55c00')
     ) +
     
     scale_x_continuous(
@@ -4045,7 +4059,88 @@
     
     labs(
       y     = "Niche Overlap Proportion (LS Mean)",
-      title = "Niche Overlap By Year for Recruitment, \n Depth, and Dissolved Oxygen"
+      title = "Niche Overlap By Year for Depth \n Dissolved Oxygen, and Recruitment"
+    ) +
+    
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.line          = element_line(color = "gray35"),
+      axis.line.x        = element_line(color = "gray35", linewidth = 0.5),
+      axis.line.y        = element_line(color = "gray35", linewidth = 0.5),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.text.x        = element_text(size = 12, color = "grey20"),
+      axis.title.x       = element_text(size = 12),
+      axis.title.y       = element_text(size = 12),
+      title              = element_text(size = 12),
+      #legend.position    = "none",
+      plot.title         = element_text(hjust = 0.5),
+      legend.position    = "top",
+      legend.title       = element_text(size = 10),
+      legend.text        = element_text(size = 9)
+    )
+  NonSigMS.point
+  
+  ### FIGURE 3h: Temp and Julian Day together ----------------------------------
+  
+  SigMS.point <- ggplot() +
+    
+    # Julian Day 
+    geom_line(data = JulMS.emmeans.df, 
+              aes(x     = as.numeric(factor(year)) - 0.05, 
+                  y     = emmean, group = 1, 
+                  color = "Time"),
+              linetype  = "dashed") +
+    geom_errorbar(data = JulMS.emmeans.df, 
+                  aes(x     = as.numeric(factor(year)) - 0.05,
+                      ymin  = lower.CL, 
+                      ymax  = upper.CL, 
+                      color = "Time"),
+                  width     = 0.05) +
+    geom_point(data = JulMS.emmeans.df, 
+               aes(x        = as.numeric(factor(year)) - 0.05, 
+                   y        = emmean, 
+                   color    = "Time"),
+               size         = 4) +
+    
+    # Temperature
+    geom_line(data = TempMS.emmeans.df, 
+              aes(x     = as.numeric(factor(year)) + 0.05, 
+                  y     = emmean, group = 1, 
+                  color = "Temperature"),
+              linetype  = "dashed") +
+    geom_errorbar(data = TempMS.emmeans.df, 
+                  aes(x     = as.numeric(factor(year)) + 0.05, 
+                      ymin  = lower.CL, ymax = upper.CL, 
+                      color = "Temperature"),
+                  width     = 0.05) +
+    geom_point(data = TempMS.emmeans.df, 
+               aes(x     = as.numeric(factor(year)) + 0.05,
+                   y     = emmean, 
+                   color = "Temperature"),
+               size      = 4) +
+    
+    scale_color_manual(
+      name   = "Niche Axis:",
+      values = c(
+        "Time"             = '#1a85ff', 
+        "Temperature"      = '#d41159')
+    ) +
+    
+    scale_x_continuous(
+      breaks = c(1, 2),
+      labels = c("2022", "2023"),
+      name   = "Year"
+    ) +
+    
+    scale_y_continuous(
+      limits = c(0.25, 0.60),
+      breaks = seq(0.25, 0.60, by = 0.05)
+    ) +
+    
+    labs(
+      y     = "Niche Overlap Proportion (LS Mean)",
+      title = "Niche Overlap By Year \n for Temperature and Time"
     ) +
     
     theme_minimal(base_size = 12) +
@@ -4065,11 +4160,18 @@
       legend.title       = element_text(size = 12),
       legend.text        = element_text(size = 11)
     )
-  NonSigMS.point
+  SigMS.point
+
+#SECTION 12: MISC ------------------------------------------------------------
+  ##12.1: Lin model temp and time ----------------------------------------------
+  test <- lm(Temp_Reg ~ Julian_Day, data = LD6.df)
   
+  ggplot(LD6.df, aes(x = Julian_Day, y = Temp_Reg)) + 
+    geom_point(color = "blue")
+    
 #SAVE AND COMPILE ALL DATA -----------------------------------------------------
-  View(NO_1.results)
-  NO_1.results
+  View(MS1_6axes.results)
+  MS1_6axes.results
   variables <- c("Julian_Day", "Pool_Number", )
   
   exportGeange <- function(results, filename) {
@@ -4136,14 +4238,17 @@
   }
   
   wb <- createWorkbook()
-  exportGeange(NO_1.results, "Year_1")
+  exportGeange(MS1_6axes.results, "Year_1")
   wb <- createWorkbook()
   exportGeange(NO_0.results, "Year_0")
   wb <- createWorkbook()
   exportGeange(NO_all_4axes.results, "Overall_4axes")
   wb <- createWorkbook() 
   exportGeange(NO_all_6axes.results, "Overall_6axes")
-  
+  wb <- createWorkbook() 
+  exportGeange(MS0.results, "MS0")
+  wb <- createWorkbook() 
+  exportGeange(MS1.results, "MS1")
   
   
   
