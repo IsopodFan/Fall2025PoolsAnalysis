@@ -218,7 +218,7 @@
       ) |> 
       head(18)
         
-    PoolAbun.sd <- LongDataPools |> 
+    TotalAbun.sd <- LongDataPools |> 
       mutate(
         year       = year(ymd(Date_Sampled)),
         month      = str_remove(Sampling_Sequence, "^1st "),
@@ -247,7 +247,7 @@
     
     TotalAbun <- TotalAbun |> 
       mutate(
-        abun.sd = PoolAbun.sd$abun.sd
+        abun.sd = TotalAbun.sd$abun.sd
       )
     
   #plot those abundances 
@@ -573,7 +573,7 @@
   #SECTION 3: RICHNESS --------------------------------------------------------- 
    ##3.1: Overall Richness (Focal Groups Only) ---------------------------------
    
-   monthly_richness <- LongDataPools |> 
+   TotalRich <- LongDataPools |> 
      mutate(
        year               = year(ymd(Date_Sampled)),
        month              = str_remove(Sampling_Sequence, "^1st "),
@@ -587,12 +587,60 @@
      arrange(year, month_num)      |> 
      mutate(
        year_month = make_date(year, month_num, 1)
+     ) |> 
+     complete(
+       year_month = seq(
+         as.Date("2022-03-01"),  # explicitly start at March 2022
+         as.Date("2023-09-01"),  # explicitly end at September 2023
+         by = "month"
+       ),
+       fill = list(richness = 0)
+     ) |> 
+     head(18)
+   
+   TotalRich.sd <- LongDataPools |> 
+     mutate(
+       year       = year(ymd(Date_Sampled)),
+       month      = str_remove(Sampling_Sequence, "^1st "),
+       month_num  = match(month, month.abb),
+       year_month = make_date(year, month_num, 1)
+     ) |> 
+     group_by(Pool_Number, year_month) |> 
+     summarise(
+       richness = n_distinct(Species),
+       .groups            = "drop"
+     ) |> 
+     group_by(year_month) |> 
+     summarise(
+       rich.sd = sd(richness, na.rm = TRUE), 
+       .groups = "drop"
+     ) |> 
+     complete(
+       year_month = seq(
+         as.Date("2022-03-01"),  # explicitly start at March 2022
+         as.Date("2023-09-01"),  # explicitly end at September 2023
+         by = "month"
+       ),
+       fill = list(rich.sd = 0)
+     ) |> 
+     head(18)
+   
+   TotalRich <- TotalRich |> 
+     mutate(
+       rich.sd = TotalRich.sd$rich.sd
      )
    
-   TotalRich.plot <- ggplot(monthly_richness, aes(x = year_month, 
+   TotalRich.plot <- ggplot(TotalRich, aes(x = year_month, 
                                                 y = richness)) +
      geom_line()  +
      geom_point() +
+     geom_errorbar(
+       aes(
+         ymin = richness - rich.sd,
+         ymax = richness + rich.sd
+       ),
+       width = 10
+     ) +
      scale_x_date(
        breaks = seq(
          from = as.Date("2022-03-01"),
@@ -601,7 +649,7 @@
        ),
        date_labels = "%Y-%b") + 
      scale_y_continuous(
-       limits = c(0,10), 
+       limits = c(0,12), 
        breaks = seq(0,100, by = 2)
        ) +
      labs(
@@ -642,10 +690,19 @@
          month     = month(year_month, label = TRUE, abbr = TRUE)
        )
    
+     rich.sd <- sd(PoolData$richness)
+     
      PoolRich.plot <- ggplot(PoolData, aes(x = year_month, 
                                                    y = richness)) +
        geom_line()  +
        geom_point() +
+       geom_errorbar(
+         aes(
+           ymin = pmax(0, richness - rich.sd),
+           ymax = richness + rich.sd
+         ),
+         width = 10
+       ) +
        scale_x_date(
          breaks = seq(
            from = as.Date("2022-03-01"),
@@ -654,7 +711,7 @@
          ),
          date_labels = "%Y-%b") + 
        scale_y_continuous(
-         limits = c(0,10), 
+         limits = c(0,12), 
          breaks = seq(0,100, by = 2)
        ) +
        labs(
@@ -684,7 +741,7 @@
   ##3.3: Total Richness (All Groups) -------------------------------------------
   
   #Repeat 3.1 with all species dataset 
-     monthly_richness_ALL <- LDAllPools |> 
+     TotalRichAll <- LDAllPools |> 
        mutate(
          year               = year(ymd(Date_Sampled)),
          month              = str_remove(Sampling_Sequence, "^1st "),
@@ -698,12 +755,60 @@
        arrange(year, month_num)      |> 
        mutate(
          year_month = make_date(year, month_num, 1)
-       )
+       ) |> 
+       complete(
+         year_month = seq(
+           as.Date("2022-03-01"),  # explicitly start at March 2022
+           as.Date("2023-09-01"),  # explicitly end at September 2023
+           by = "month"
+         ),
+         fill = list(richness = 0)
+       ) |> 
+        head(18)
+   
+   TotalRichAll.sd <- LDAllPools |> 
+     mutate(
+       year       = year(ymd(Date_Sampled)),
+       month      = str_remove(Sampling_Sequence, "^1st "),
+       month_num  = match(month, month.abb),
+       year_month = make_date(year, month_num, 1)
+     ) |> 
+     group_by(Pool_Number, year_month) |> 
+     summarise(
+       richness = n_distinct(Species),
+       .groups = "drop"
+     ) |> 
+     group_by(year_month) |> 
+     summarise(
+       rich.sd = sd(richness, na.rm = TRUE), 
+       .groups = "drop"
+     ) |> 
+     complete(
+       year_month = seq(
+         as.Date("2022-03-01"),  # explicitly start at March 2022
+         as.Date("2023-09-01"),  # explicitly end at September 2023
+         by = "month"
+       ),
+       fill = list(abun.sd = 0)
+     ) |> 
+     head(18)
+   
+   TotalRichAll <- TotalRichAll |> 
+     mutate(
+       rich.sd = TotalRichAll.sd$rich.sd
+     )
      
-     TotalRichALL.plot <- ggplot(monthly_richness_ALL, aes(x = year_month, 
+     TotalRichALL.plot <- ggplot(TotalRichAll, aes(x = year_month, 
                                                     y = richness)) +
        geom_line()  +
        geom_point() +
+       geom_errorbar(
+         aes(
+           ymin = pmax(0, richness - rich.sd),
+           ymax = richness + rich.sd
+         ),
+         width = 10
+       ) +
        scale_x_date(
          breaks = seq(
            from = as.Date("2022-03-01"),
@@ -712,8 +817,8 @@
          ),
          date_labels = "%Y-%b") + 
        scale_y_continuous(
-         limits = c(0,20), 
-         breaks = seq(0,20, by = 5)
+         limits = c(0,22), 
+         breaks = seq(0,22, by = 5)
        ) +
        labs(
          x     = "Month",
@@ -753,10 +858,19 @@
            month     = month(year_month, label = TRUE, abbr = TRUE)
          )
        
+       rich.sd <- sd(PoolData$richness)
+       
        PoolRich.plot <- ggplot(PoolData, aes(x = year_month, 
                                              y = richness)) +
          geom_line()  +
          geom_point() +
+         geom_errorbar(
+           aes(
+             ymin = pmax(0, richness - rich.sd),
+             ymax = richness + rich.sd
+           ),
+           width = 10
+         ) +
          scale_x_date(
            breaks = seq(
              from = as.Date("2022-03-01"),
@@ -836,11 +950,52 @@
          year_month = make_date(year, month_num, 1)
        ) |> 
        head(18)
-   
+     
+    WDna.div.sd <- WDna |>  
+      mutate(
+        year       = year(ymd(Date_Sampled)),
+        month      = str_remove(Sampling_Sequence, "^1st "),
+        month_num  = match(month, month.abb),
+        year_month = make_date(year, month_num, 1)
+      ) |> 
+      group_by(Pool_Number, year_month) |> 
+      summarise(
+        diversity = mean(shannon_div),
+        .groups            = "drop"
+      ) |> 
+      group_by(year_month) |> 
+      summarise(
+        div.sd = sd(diversity, na.rm = TRUE), 
+        .groups = "drop"
+      ) |> 
+      complete(
+        year_month = seq(
+          as.Date("2022-03-01"),  # explicitly start at March 2022
+          as.Date("2023-09-01"),  # explicitly end at September 2023
+          by = "month"
+        ),
+        fill = list(div.sd = 0)
+      ) |> 
+      head(18)
+    
+    WDna.div <- WDna.div |> 
+      mutate(
+        div.sd = WDna.div.sd$div.sd
+      )
+    
+    WDna.div$diversity[is.na(WDna.div$diversity)] <- 0
+    
     #plot it
      TotalDiv.plot <- ggplot(WDna.div, aes(x = year_month, y = diversity)) +
        geom_line()  +
        geom_point() +
+       geom_errorbar(
+         aes(
+           ymin = pmax(0, diversity - div.sd),
+           ymax = diversity + div.sd
+         ),
+         width = 10
+       ) +
        scale_x_date(
          breaks = seq(
            from = as.Date("2022-03-01"),
@@ -863,7 +1018,7 @@
      #create a function to create the above graph for each pool individually
 
     DivPlot <- function(PoolNum) {
-      
+
     Pool.div <- WDna |>  
       filter(Pool_Number == PoolNum) |> 
       mutate(
@@ -882,9 +1037,20 @@
       ) |> 
       head(18)
     
+    Pool.div$diversity[is.na(Pool.div$diversity)] <- 0
+    
+    div.sd <- sd(Pool.div$diversity)
+    
      PoolDiv.plot <- ggplot(Pool.div, aes(x = year_month, y = diversity)) +
       geom_line()  +
       geom_point() +
+       geom_errorbar(
+         aes(
+           ymin = pmax(0, diversity - div.sd),
+           ymax = diversity + div.sd
+         ),
+         width = 10
+       ) +
       scale_x_date(
         breaks = seq(
           from = as.Date("2022-03-01"),
@@ -893,13 +1059,13 @@
         ),
         date_labels = "%Y-%b") + 
       scale_y_continuous(
-        limits = c(0,1.1), 
-        breaks = seq(0,1.1, by = 0.2)
+        limits = c(0,1.7), 
+        breaks = seq(0,1.7, by = 0.2)
       ) +
       labs(
         x     = "Month",
         y     = "Diversity",
-        title = paste("Pool", PoolNum, "Shannon Diversity Over Time \n Focal Groups Only")
+        title = paste("Pool", PoolNum, "Shannon Diversity Over Time \n (Focal Groups Only)")
       ) +
       theme_minimal() 
      
@@ -959,13 +1125,51 @@
       ) |> 
       head(18)
     
-    # convert NAs to 0
+    WDna.All.div.sd <- WDna.All |>  
+      mutate(
+        year       = year(ymd(Date_Sampled)),
+        month      = str_remove(Sampling_Sequence, "^1st "),
+        month_num  = match(month, month.abb),
+        year_month = make_date(year, month_num, 1)
+      ) |> 
+      group_by(Pool_Number, year_month) |> 
+      summarise(
+        diversity = mean(shannon_div),
+        .groups            = "drop"
+      ) |> 
+      group_by(year_month) |> 
+      summarise(
+        div.sd = sd(diversity, na.rm = TRUE), 
+        .groups = "drop"
+      ) |> 
+      complete(
+        year_month = seq(
+          as.Date("2022-03-01"),  # explicitly start at March 2022
+          as.Date("2023-09-01"),  # explicitly end at September 2023
+          by = "month"
+        ),
+        fill = list(div.sd = 0)
+      ) |> 
+      head(18)
+    
+    WDna.All.div <- WDna.All.div |> 
+      mutate(
+        div.sd = WDna.All.div.sd$div.sd
+      )
+    
     WDna.All.div$diversity[is.na(WDna.All.div$diversity)] <- 0
     
     #plot
     DivAll.plot <- ggplot(WDna.All.div, aes(x = year_month, y = diversity)) +
       geom_line()  +
       geom_point() +
+      geom_errorbar(
+        aes(
+          ymin = pmax(0, diversity - div.sd),
+          ymax = diversity + div.sd
+        ),
+        width = 10
+      ) +
       scale_x_date(
         breaks = seq(
           from = as.Date("2022-03-01"),
@@ -1009,9 +1213,18 @@
       # convert NAs to 0
       Pool.div$diversity[is.na(Pool.div$diversity)] <- 0
       
+      div.sd <- sd(Pool.div$diversity)
+      
       PoolDiv.plot <- ggplot(Pool.div, aes(x = year_month, y = diversity)) +
         geom_line()  +
         geom_point() +
+        geom_errorbar(
+          aes(
+            ymin = pmax(0, diversity - div.sd),
+            ymax = diversity + div.sd
+          ),
+          width = 10
+        ) +
         scale_x_date(
           breaks = seq(
             from = as.Date("2022-03-01"),
@@ -1020,8 +1233,8 @@
           ),
           date_labels = "%Y-%b") + 
         scale_y_continuous(
-          limits = c(0,1.3), 
-          breaks = seq(0,1.3, by = 0.2)
+          limits = c(0,1.65), 
+          breaks = seq(0,1.6, by = 0.2)
         ) +
         labs(
           x     = "Month",
