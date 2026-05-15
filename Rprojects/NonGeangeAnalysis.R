@@ -270,14 +270,10 @@
        ),
        width = 10
       ) +
-     scale_x_continuous(
-       limits = c(0,625),
-       breaks = seq(0,600, by = 100)
-     ) +
       labs(
         x     = "Days Since January 1st, 2022",
         y     = "Total Organismal Abundance",
-        title = NULL
+        title = "Total Organismal Abundance Over Time Across All Pools"
       ) +
       theme_minimal()
   
@@ -354,7 +350,7 @@
     ) +
     scale_y_continuous(
       limits = c(0,700), 
-      breaks = seq(0,600, by = 200)
+      breaks = seq(0,600, by = 100)
     ) +
     labs(
       title = paste("Pool", PoolNum),
@@ -662,14 +658,6 @@
        ),
        width = 10
      ) +
-     scale_x_continuous(
-       limits = c(0,625),
-       breaks = seq(0,600, by = 100)
-     ) +
-     scale_y_continuous(
-       limits = c(0,11),
-       breaks = seq(0,10, by = 2)
-     ) +
      labs(
        x     = "Days Since January 1st, 2022",
        y     = "Total Species Richness",
@@ -718,13 +706,13 @@
        geom_errorbar(
          aes(
            ymin = pmax(0, richness - rich.sd),
-           ymax = pmin(richness + rich.sd, 9)
+           ymax = richness + rich.sd
          ),
          width = 10
        ) +
        scale_y_continuous(
          limits = c(0,12), 
-         breaks = seq(0,15, by = 5)
+         breaks = seq(0,100, by = 2)
        ) +
        labs(
          x     = NULL,
@@ -736,11 +724,16 @@
      return(PoolRich.plot)
    }
    
-   RichPlot.list <- list(RichPlot(1), RichPlot(2), RichPlot(3), RichPlot(4), 
-                         RichPlot(5), RichPlot(6), RichPlot(7), RichPlot(8),
-                         RichPlot(9), RichPlot(10))
-   
-   RichPanel <- wrap_plots(RichPlot.list, nrow = 5, ncol = 2) 
+   RichPlot(1)
+   RichPlot(2)
+   RichPlot(3)
+   RichPlot(4)   
+   RichPlot(5)
+   RichPlot(6)
+   RichPlot(7)
+   RichPlot(8)
+   RichPlot(9)
+   RichPlot(10)
 
    
    
@@ -1032,34 +1025,40 @@
         .groups            = "drop"
       )                             |> 
       arrange(year, month_num)      |> 
-      head(18)                      |> 
       mutate(
-        year_month = make_date(year, month_num, 1),
-        julian_day = sample_jday
-      )
+        year_month = make_date(year, month_num, 1)
+      ) |> 
+      head(18)
     
     Pool.div$diversity[is.na(Pool.div$diversity)] <- 0
     
     div.sd <- sd(Pool.div$diversity)
     
-     PoolDiv.plot <- ggplot(Pool.div, aes(x = julian_day, y = diversity)) +
+     PoolDiv.plot <- ggplot(Pool.div, aes(x = year_month, y = diversity)) +
       geom_line()  +
       geom_point() +
        geom_errorbar(
          aes(
            ymin = pmax(0, diversity - div.sd),
-           ymax = pmin(diversity + div.sd, 1)
+           ymax = diversity + div.sd
          ),
          width = 10
        ) +
+      scale_x_date(
+        breaks = seq(
+          from = as.Date("2022-03-01"),
+          to   = max(WDna.div$year_month),
+          by   = "3 months"
+        ),
+        date_labels = "%Y-%b") + 
       scale_y_continuous(
-        limits = c(0,1.1), 
-        breaks = seq(0,1, by = 0.5)
+        limits = c(0,1.7), 
+        breaks = seq(0,1.7, by = 0.2)
       ) +
       labs(
-        x     = NULL,
-        y     = NULL,
-        title = paste("Pool", PoolNum)
+        x     = "Month",
+        y     = "Diversity",
+        title = paste("Pool", PoolNum, "Shannon Diversity Over Time \n (Focal Groups Only)")
       ) +
       theme_minimal() 
      
@@ -1067,13 +1066,19 @@
      
     }
     
-     DivPlot.list <- list(DivPlot(1), DivPlot(2), DivPlot(3), DivPlot(4), 
-                           DivPlot(5), DivPlot(6), DivPlot(7), DivPlot(8),
-                           DivPlot(9), DivPlot(10))
-     
-     DivPanel <- wrap_plots(DivPlot.list, nrow = 5, ncol = 2) 
+    #use function on each pool
+    DivPlot(1)
+    DivPlot(2)
+    DivPlot(3)
+    DivPlot(4)   
+    DivPlot(5)
+    DivPlot(6)
+    DivPlot(7)
+    DivPlot(8)
+    DivPlot(9)
+    DivPlot(10) 
     
-  
+    
   ##4.3: Total Diversity Over Time (All Groups) --------------------------------
     
     WDna.All <- WideData |> 
