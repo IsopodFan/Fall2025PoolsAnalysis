@@ -59,7 +59,7 @@
     #ensure wd is correct
       setwd(here())
     #import data
-      WideData <- read_excel(here("PoolsDataWReg.xlsx"))
+      WideData <- read_excel(here("FINAL_POOLS_DATA_(5-26).xlsx"))
     #flip data
       LongData <- gather(data  = WideData, 
                    key   = "Species", 
@@ -69,13 +69,15 @@
       LongData <- LongData |> 
         mutate(Count            = na_if(Count, "NA"))    |> 
         mutate(Depth_cm         = na_if(Depth_cm, "NA")) |> 
-        mutate(Temperature_C    = na_if(Temp_Reg, "NA")) |> 
-        mutate(Dissolved_Oxygen = na_if(O2_Reg, "NA"))
+        mutate(Temp_C    = na_if(Temp_C, "NA")) |> 
+        mutate(`O2_%` = na_if(`O2_%`, "NA"))
+      
+    LongData <-  rename(LongData, O2 = `O2_%`)
 
   #check to make sure there aren't any NAs remaining in other columns
     sum(is.na(LongData[, !(names(LongData) %in% c("Count", "Depth_cm", 
-                                                  "Temperature_C", 
-                                                  "Dissolved_Oxygen",
+                                                  "Temp_C", 
+                                                  "O2",
                                                   "NOTES"))]))
   #we good if you see 0
 
@@ -119,7 +121,7 @@
   
   species05 <- c("Cladoceran", "Copepod", "Diptera_Pupae", 
                  "Midge_Larvae", "Mites", "Mosquito_Larvae", 
-                 "Ostracod", "Roundworm", "Springtail") 
+                 "Ostracod", "Nematode", "Springtail") 
   
   LongDataPools <- LongDataPools |> 
     filter(Species %in% species05)
@@ -135,8 +137,8 @@
   
   #convert columns into number 
     LongDataPools$Depth_cm <- as.numeric(LongDataPools$Depth_cm)
-    LongDataPools$Temp_Reg <- as.numeric(LongDataPools$Temp_Reg)
-    LongDataPools$O2_Reg   <- as.numeric(LongDataPools$O2_Reg)
+    LongDataPools$Temp_C <- as.numeric(LongDataPools$Temp_C)
+    LongDataPools$O2   <- as.numeric(LongDataPools$O2)
   
 #SECTION 2: ABUNDANCE ----------------------------------------------------------
   ## 2.1: Pie chart of relative abundances -------------------------------------
@@ -377,6 +379,8 @@
    
   ##2.4: Total Abundance (All Groups) ------------------------------------------
    #create new version of LongData, but without filtering specific species
+   WideData <- rename(WideData, O2 = `O2_%`)
+   
    LDAll <- gather(data  = WideData, 
                    key   = "Species", 
                    value = "Count", "Ostracod":"Springtail") 
@@ -385,8 +389,8 @@
    LDAll <- LDAll |> 
      mutate(Count            = na_if(Count, "NA"))    |> 
      mutate(Depth_cm         = na_if(Depth_cm, "NA")) |> 
-     mutate(Temperature_C    = na_if(Temp_Reg, "NA")) |> 
-     mutate(Dissolved_Oxygen = na_if(O2_Reg, "NA"))
+     mutate(Temperature_C    = na_if(Temp_C, "NA")) |> 
+     mutate(Dissolved_Oxygen = na_if(O2, "NA"))
    
    #check to make sure there aren't any NAs remaining in other columns
    sum(is.na(LDAll[, !(names(LDAll) %in% c("Count", "Depth_cm", 
@@ -433,8 +437,8 @@
    
    #convert columns into number 
    LDAllPools$Depth_cm <- as.numeric(LDAllPools$Depth_cm)
-   LDAllPools$Temp_Reg <- as.numeric(LDAllPools$Temp_Reg)
-   LDAllPools$O2_Reg   <- as.numeric(LDAllPools$O2_Reg)
+   LDAllPools$Temp_C <- as.numeric(LDAllPools$Temp_C)
+   LDAllPools$O2   <- as.numeric(LDAllPools$O2)
    
    
   #Repeat 2.2 with LDAll
@@ -919,22 +923,22 @@
   #filter unneeded data out of WideData
   WDna <- WideData |> 
        #use mutate across everything to turn all instances of "NA" into a 0
-       mutate(across(17:50, ~ ifelse(. == "NA", 0, .))) |> 
+       mutate(across(12:20, ~ ifelse(. == "NA", 0, .))) |> 
        #convert all data columns into numeric 
-       mutate(across(17:50, as.numeric)) |> 
+       mutate(across(12:20, as.numeric)) |> 
        #remove everything that's not considered
        filter(!(Sampling_Type %in% "Surface skim")) |> 
        filter(!(Pool_Number %in% "Pond")) |>
        filter(!(Pool_Number %in% "Creek")) |> 
        filter(!(Sampling_Sequence %in% other_sequences)) |> 
        select(
-         1:16,
+         1:11,
          any_of(species05)
        ) 
      
     #calculate diversity
-     div <- diversity(WDna[,17:25], index = "shannon")
-     even <- div/log(specnumber(WDna[,17:25]))
+     div <- diversity(WDna[,12:20], index = "shannon")
+     even <- div/log(specnumber(WDna[,12:20]))
      
      #make it a new column in the dataset
      WDna$shannon_div <- div
@@ -1007,6 +1011,10 @@
        scale_y_continuous(
          limits = c(0,1), 
          breaks = seq(0,1, by = 0.2)
+       ) +
+       scale_x_continuous(
+         limits = c(0,625),
+         breaks = seq(0,600, by = 100)
        ) +
        labs(
          x     = "Days Since January 1st, 2022",
@@ -1247,6 +1255,173 @@
     DivPlotAll(8)
     DivPlotAll(9)
     DivPlotAll(10)
+    
+# SECTION 5: EVENNESS ----------------------------------------------------------
+  ##5.1: Total Evenness Over Time ----------------------------------------------
+    
+    WDna <- WideData |> 
+      #use mutate across everything to turn all instances of "NA" into a 0
+      mutate(across(17:50, ~ ifelse(. == "NA", 0, .))) |> 
+      #convert all data columns into numeric 
+      mutate(across(17:50, as.numeric)) |> 
+      #remove everything that's not considered
+      filter(!(Sampling_Type %in% "Surface skim")) |> 
+      filter(!(Pool_Number %in% "Pond")) |>
+      filter(!(Pool_Number %in% "Creek")) |> 
+      filter(!(Sampling_Sequence %in% other_sequences)) |> 
+      select(
+        1:16,
+        any_of(species05)
+      ) 
+    
+    #calculate evenness
+    div <- diversity(WDna[,17:25], index = "shannon")
+    even <- div/log(9)
+    
+    #make it a new column in the dataset
+    WDna$shannon_div <- div
+    WDna$even <- even
+    
+    # make the sampling sequences work and then summarize by evenness
+    WDna.even <- WDna |> 
+      mutate(
+        year               = year(ymd(Date_Sampled)),
+        month              = str_remove(Sampling_Sequence, "^1st "),
+        month_num          = match(month, month.abb)
+      )                             |> 
+      group_by(year, month_num)     |> 
+      summarise(
+        evenness = mean(even),
+        avg_julian_day = mean(Julian_Day, na.rm = TRUE),
+        .groups            = "drop"
+      )                             |> 
+      arrange(year, month_num)      |> 
+      mutate(
+        year_month = make_date(year, month_num, 1)
+      ) |> 
+      head(18)
+    
+    WDna.even.sd <- WDna |>  
+      mutate(
+        year       = year(ymd(Date_Sampled)),
+        month      = str_remove(Sampling_Sequence, "^1st "),
+        month_num  = match(month, month.abb),
+        year_month = make_date(year, month_num, 1)
+      ) |> 
+      group_by(Pool_Number, year_month) |> 
+      summarise(
+        evenness = mean(even),
+        .groups            = "drop"
+      ) |> 
+      group_by(year_month) |> 
+      summarise(
+        even.sd = sd(even, na.rm = TRUE), 
+        .groups = "drop"
+      ) |> 
+      complete(
+        year_month = seq(
+          as.Date("2022-03-01"),  # explicitly start at March 2022
+          as.Date("2023-09-01"),  # explicitly end at September 2023
+          by = "month"
+        ),
+        fill = list(even.sd = 0)
+      ) |> 
+      head(18)
+    
+    WDna.even <- WDna.even |> 
+      mutate(
+        even.sd = WDna.even.sd$even.sd
+      )
+    
+    TotalEven.plot <- ggplot(WDna.even, aes(x = avg_julian_day, y = evenness)) +
+      geom_line()  +
+      geom_point() +
+      geom_errorbar(
+        aes(
+          ymin = pmax(0, evenness - even.sd),
+          ymax = evenness + even.sd
+        ),
+        width = 10
+      ) +
+      scale_y_continuous(
+        limits = c(0,1), 
+        breaks = seq(0,1, by = 0.2)
+      ) +
+      scale_x_continuous(
+        limits = c(0,610),
+        breaks = seq(0,600, by = 100)
+      ) +
+      labs(
+        x     = "Days Since January 1st, 2022",
+        y     = "Pielou Evenness",
+      ) +
+      theme_minimal() 
+    
+  ## 5.2: Evenness by Pool -----------------------------------------------------
+    PoolNum <- 6
+    EvenPlot <- function(PoolNum) {
+      
+      Pool.even <- WDna |>  
+        filter(Pool_Number == PoolNum) |> 
+        mutate(
+          year               = year(ymd(Date_Sampled)),
+          month              = str_remove(Sampling_Sequence, "^1st "),
+          month_num          = match(month, month.abb)
+        )                             |> 
+        group_by(year, month_num)     |> 
+        summarise(
+          evenness = mean(even),
+          .groups            = "drop"
+        )                             |> 
+        arrange(year, month_num)      |> 
+        head(18)                      |> 
+        mutate(
+          year_month = make_date(year, month_num, 1),
+          julian_day = sample_jday
+        )
+      
+      print(Pool.even)
+      
+      Pool.even$evenness[is.na(Pool.even$evenness)] <- 0
+      
+      even.sd <- sd(Pool.even$evenness)
+      
+      PoolEven.plot <- ggplot(Pool.even, aes(x = julian_day, y = evenness)) +
+        geom_line()  +
+        geom_point() +
+        geom_errorbar(
+          aes(
+            ymin = pmax(0, evenness - even.sd),
+            ymax = evenness + even.sd
+          ),
+          width = 10
+        ) +
+        scale_y_continuous(
+          limits = c(0,1.1), 
+          breaks = seq(0,1, by = 0.5)
+        ) +
+        scale_x_continuous(
+          limits = c(0,610),
+          breaks = seq(0,600, by = 100)
+        ) +
+        labs(
+          x     = NULL,
+          y     = NULL,
+          title = paste("Pool", PoolNum)
+        ) +
+        theme_minimal() 
+      
+      return(PoolEven.plot)
+      
+    }
+    EvenPlot(1)
+    
+    EvenPlot.list <- list(EvenPlot(1), EvenPlot(2), EvenPlot(3), EvenPlot(4), 
+                         EvenPlot(5), EvenPlot(6), EvenPlot(7), EvenPlot(8),
+                         EvenPlot(9), EvenPlot(10))
+    
+    EvenPanel <- wrap_plots(EvenPlot.list, nrow = 5, ncol = 2)  
+    
     
     
     
